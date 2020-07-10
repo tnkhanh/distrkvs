@@ -1,0 +1,9 @@
+#ifndef DISTRKVSCONFIG_H_
+#define DISTRKVSCONFIG_H_
+
+#define VERSION_MAJOR @distrkvs_VERSION_MAJOR@
+#define VERSION_MINOR @distrkvs_VERSION_MINOR@
+
+const char kProjectName[] = "@PROJECT_NAME@";
+
+#endif  // DISTRKVSCONFIG_H_
