@@ -7,11 +7,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 configure_file("${PROJECT_NAME}Config.h.in" "${PROJECT_NAME}Config.h")
 
-add_executable(${PROJECT_NAME} src/main.cpp)
+add_executable(${PROJECT_NAME} src/main.cc)
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_BINARY_DIR})
 target_include_directories(${PROJECT_NAME} PUBLIC ~/local/include)
 
-target_link_directories(${PROJECT_NAME} PUBLIC ~/local/lib)
+find_library(ROCKSDB NAMES librocksdb.a HINTS ~/work/rocksdb/buildnowith REQUIRED)
 
-target_link_libraries(${PROJECT_NAME} PUBLIC lz4 rocksdb stdc++fs)
+target_link_libraries(${PROJECT_NAME} PUBLIC pthread dl ${ROCKSDB} stdc++fs)

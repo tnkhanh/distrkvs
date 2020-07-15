@@ -18,7 +18,7 @@ using rocksdb::ReadOptions;
 using rocksdb::WriteBatch;
 
 int main(int argc, char **argv) {
-  const std::string kDBPath = "database";
+  const std::string kDBPath = "/opt/database";
   std::filesystem::create_directories(kDBPath);
 
   std::cout << kProjectName << " Version " << VERSION_MAJOR << "."
