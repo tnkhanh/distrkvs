@@ -1,2 +1,7 @@
 build/
+examples
 *.o
+*.swp
+*.cmake
+CMakeCache.txt
+CMakeFiles/
