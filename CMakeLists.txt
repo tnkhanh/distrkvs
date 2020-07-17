@@ -10,17 +10,14 @@ configure_file("${PROJECT_NAME}Config.h.in" "${PROJECT_NAME}Config.h")
 # assumes protobuf is installed
 set(protobuf_MODULE_COMPATIBLE TRUE)
 find_package(Protobuf CONFIG REQUIRED)
-message(STATUS "Using protobuf ${protobuf_VERSION}")
+message(STATUS "Using Protobuf ${Protobuf_VERSION}")
 
-set(_PROTOBUF_LIBPROTOBUF protobuf::libprotobuf)
-set(_REFLECTION gRPC::grpc++_reflection)
-
-# Find gRPC installation
-# Looks for gRPCConfig.cmake file installed by gRPC's cmake installation.
 find_package(gRPC CONFIG REQUIRED)
 message(STATUS "Using gRPC ${gRPC_VERSION}")
 
-set(_GRPC_GRPCPP gRPC::grpc++)
+find_package(RocksDB CONFIG REQUIRED)
+message(STATUS "Using RocksDB ${RocksDB_VERSION} from ${RocksDB_DIR}")
+
 set(_PROTOBUF_PROTOC $<TARGET_FILE:protobuf::protoc>)
 set(_GRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
  
@@ -46,10 +43,7 @@ add_custom_command(
 
 add_executable(${PROJECT_NAME} src/main.cc ${proto_srcs} ${grpc_srcs})
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_BINARY_DIR} ~/local/include)
+target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_BINARY_DIR})
 
-find_library(ROCKSDB NAMES librocksdb.a HINTS ~/work/rocksdb/buildnowith REQUIRED)
-
-target_link_libraries(${PROJECT_NAME} PUBLIC pthread dl ${ROCKSDB} stdc++fs)
-target_link_libraries(${PROJECT_NAME} PUBLIC ${_REFLECTION}  ${_GRPC_GRPCPP} ${_PROTOBUF_LIBPROTOBUF})
+target_link_libraries(${PROJECT_NAME} PUBLIC pthread dl RocksDB::rocksdb gRPC::grpc++_reflection gRPC::grpc++ protobuf::libprotobuf stdc++fs)
 
