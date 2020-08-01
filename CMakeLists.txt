@@ -1,11 +1,9 @@
 cmake_minimum_required(VERSION 3.13)
 
-project(distrkvs VERSION 1.0)
+project(distrkvs VERSION 0.0.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-
-configure_file("${PROJECT_NAME}Config.h.in" "${PROJECT_NAME}Config.h")
 
 # assumes protobuf is installed
 set(protobuf_MODULE_COMPATIBLE TRUE)
@@ -41,9 +39,11 @@ add_custom_command(
         "${proto}"
       DEPENDS "${proto}")
 
-add_executable(${PROJECT_NAME} src/main.cc ${proto_srcs} ${grpc_srcs})
-
-target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_BINARY_DIR})
-
-target_link_libraries(${PROJECT_NAME} PUBLIC pthread dl RocksDB::rocksdb gRPC::grpc++_reflection gRPC::grpc++ protobuf::libprotobuf stdc++fs)
+foreach (_target
+  "${PROJECT_NAME}_server" "${PROJECT_NAME}_client")
+  add_executable(${_target} "src/${_target}.cc" src/replica.cc ${proto_srcs} ${grpc_srcs})
+  target_include_directories(${_target} PUBLIC ${PROJECT_BINARY_DIR})
+  target_include_directories(${_target} PUBLIC ${PROJECT_SOURCE_DIR})
+  target_link_libraries(${_target} PUBLIC pthread dl RocksDB::rocksdb gRPC::grpc++_reflection gRPC::grpc++ protobuf::libprotobuf stdc++fs)
+endforeach()
 

@@ -1,6 +1,7 @@
 build/
 examples
 *.o
+*.h.gch
 *.swp
 *.cmake
 CMakeCache.txt
