@@ -41,9 +41,8 @@ add_custom_command(
 
 foreach (_target
   "${PROJECT_NAME}_server" "${PROJECT_NAME}_client")
-  add_executable(${_target} "src/${_target}.cc" src/replica.cc ${proto_srcs} ${grpc_srcs})
+  add_executable(${_target} "src/${_target}.cc" src/server.cc src/replica.cc ${proto_srcs} ${grpc_srcs})
   target_include_directories(${_target} PUBLIC ${PROJECT_BINARY_DIR})
   target_include_directories(${_target} PUBLIC ${PROJECT_SOURCE_DIR})
   target_link_libraries(${_target} PUBLIC pthread dl RocksDB::rocksdb gRPC::grpc++_reflection gRPC::grpc++ protobuf::libprotobuf stdc++fs)
 endforeach()
-
