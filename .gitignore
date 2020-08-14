@@ -1,5 +1,4 @@
 build/
-examples
 *.o
 *.h.gch
 *.swp

@@ -82,11 +82,25 @@ int main(int argc, char **argv) {
   StoreClient store(grpc::CreateChannel(
       server_address + ":50017", grpc::InsecureChannelCredentials()));
 
-  std::string reply = store.Put("some key", "some value");
-  std::cout << "Server answered: " << reply << "\n";
-
-  reply = store.Get("Key to get");
-  std::cout << "Server answered: " << reply << "\n";
+  while (true) {
+    std::string comm, key, value, reply;
+    std::cin>>comm;
+    if (comm=="Put") {
+      std::cout<<"Put: ";
+      std::cin>>key>>value;
+      reply = store.Put(key, value);
+      std::cout << "Server answered: " << reply << "\n";
+    } else if (comm=="Get") {
+      std::cout<<"Get: ";
+      std::cin>>key;
+      reply = store.Get(key);
+      std::cout << "Server answered: " << reply << "\n";
+    } else if (comm=="Quit" || comm=="Exit") {
+      break;
+    } else {
+      std::cout<<"Not a command!\n";
+    }
+  }
 
   return 0;
 }
