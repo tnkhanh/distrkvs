@@ -26,9 +26,10 @@ using grpc::Server;
 using grpc::ServerBuilder;
 using grpc::ServerContext;
 using distrkvs::Store;
-using distrkvs::Key;
-using distrkvs::KeyValue;
-using distrkvs::Value;
+using distrkvs::GetRequest;
+using distrkvs::PutRequest;
+using distrkvs::GetResponse;
+using distrkvs::PutResponse;
 
 namespace distrkvs::server {
 // Logic and data behind the server's behavior.
@@ -65,34 +66,34 @@ class StoreServiceImpl final : public Store::Service {
  private:
   DB* db_;
 
-  grpc::Status Get(ServerContext* context, const Key* key,
-             Value* value) override {
+  grpc::Status Get(ServerContext* context, const GetRequest* get_request,
+             GetResponse* get_response) override {
     std::string found_value;
-    rocksdb::Status s = db_->Get(ReadOptions(), key->key(), &found_value);
+    rocksdb::Status s = db_->Get(ReadOptions(), get_request->key(), &found_value);
 
     if (s.ok()) {
-      value->set_value("Value: " + found_value);
+      get_response->set_value("Value: " + found_value);
     }
     else
     if (s.IsNotFound()) {
-      value->set_value("Key not found");
+      get_response->set_value("Key not found");
     }
     else {
-      value->set_value("Something wrong");
+      get_response->set_value("Something wrong");
     }
 
     return grpc::Status::OK;
   }
 
-  grpc::Status Put(ServerContext* context, const KeyValue* key_value,
-             Value* value) override {
+  grpc::Status Put(ServerContext* context, const PutRequest* put_request,
+             PutResponse* put_response) override {
     rocksdb::Status s = db_->Put(WriteOptions(), 
-                                key_value->key(), key_value->value());
+                                put_request->key(), put_request->value());
     if (s.ok()) {
-      value->set_value("OK!");
+      put_response->set_value("OK!");
     }
     else {
-      value->set_value("Not OK!");
+      put_response->set_value("Not OK!");
     }
     return grpc::Status::OK;
   }

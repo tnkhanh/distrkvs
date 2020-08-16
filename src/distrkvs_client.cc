@@ -15,14 +15,16 @@
 
 #include "store.grpc.pb.h"
 #include "src/replica.h"
+//#include "src/client.h"
 
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::Status;
-using distrkvs::Key;
-using distrkvs::KeyValue;
-using distrkvs::Value;
 using distrkvs::Store;
+using distrkvs::GetRequest;
+using distrkvs::PutRequest;
+using distrkvs::GetResponse;
+using distrkvs::PutResponse;
 
 class StoreClient {
  public:
@@ -30,15 +32,15 @@ class StoreClient {
       : stub_(Store::NewStub(channel)) {}
 
   std::string Put(const std::string& key, const std::string& value) {
-    KeyValue kv;
-    kv.set_key(key);
-    kv.set_value(value);
+    PutRequest put_request;
+    put_request.set_key(key);
+    put_request.set_value(value);
 
-    Value reply;
+    PutResponse reply;
     ClientContext context;
 
     // The actual RPC.
-    Status status = stub_->Put(&context, kv, &reply);
+    Status status = stub_->Put(&context, put_request, &reply);
 
     if (status.ok()) {
       return reply.value();
@@ -50,13 +52,13 @@ class StoreClient {
     }
   }
 
-  std::string Get(const std::string& key_string) {
-    Key key;
-    key.set_key(key_string);
-    Value reply;
+  std::string Get(const std::string& key) {
+    GetRequest get_request;
+    get_request.set_key(key);
+    GetResponse reply;
     ClientContext context;
 
-    Status status = stub_->Get(&context, key, &reply);
+    Status status = stub_->Get(&context, get_request, &reply);
     if (status.ok()) {
       return reply.value();
     } else {
