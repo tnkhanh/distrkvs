@@ -5,13 +5,13 @@ syntax = "proto3";
 package distrkvs;
 
 service Store {
-  // Provides a value for each key request
   rpc Get (GetRequest) returns (GetResponse) {}
   rpc Put (PutRequest) returns (PutResponse) {}
 }
 
 message GetRequest {
-  string key = 1;
+  bool from_client = 1;
+  string key = 2;
 }
 
 message GetResponse {
@@ -19,8 +19,9 @@ message GetResponse {
 }
 
 message PutRequest {
-  string key = 1;
-  string value = 2;
+  bool from_client = 1;
+  string key = 2;
+  string value = 3;
 }
 
 message PutResponse {

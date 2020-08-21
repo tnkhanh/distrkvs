@@ -48,15 +48,6 @@ class StoreServiceImpl final : public Store::Service {
     // open DB
     rocksdb::Status s = DB::Open(options, kDBPath, &db_);
     assert(s.ok());
-
-    // Put key-value
-    s = db_->Put(WriteOptions(), "key1", "value");
-    assert(s.ok());
-    std::string value;
-    // get value
-    s = db_->Get(ReadOptions(), "key1", &value);
-    assert(s.ok());
-    assert(value == "value");
   }
 
   ~StoreServiceImpl() {
@@ -68,34 +59,38 @@ class StoreServiceImpl final : public Store::Service {
 
   grpc::Status Get(ServerContext* context, const GetRequest* get_request,
              GetResponse* get_response) override {
-    std::string found_value;
-    rocksdb::Status s = db_->Get(ReadOptions(), get_request->key(), &found_value);
+    if (get_request->from_client()) {
+      return grpc::Status::OK;
+    } else {
+      std::string found_value;
+      rocksdb::Status s = db_->Get(ReadOptions(), get_request->key(), &found_value);
 
-    if (s.ok()) {
-      get_response->set_value("Value: " + found_value);
-    }
-    else
-    if (s.IsNotFound()) {
-      get_response->set_value("Key not found");
-    }
-    else {
-      get_response->set_value("Something wrong");
-    }
+      if (s.ok()) {
+        get_response->set_value("OK " + found_value);
+      } else if (s.IsNotFound()) {
+        get_response->set_value("Key not found");
+      } else {
+        get_response->set_value("NotOK");
+      }
 
-    return grpc::Status::OK;
+      return grpc::Status::OK;
+    }
   }
 
   grpc::Status Put(ServerContext* context, const PutRequest* put_request,
              PutResponse* put_response) override {
-    rocksdb::Status s = db_->Put(WriteOptions(), 
-                                put_request->key(), put_request->value());
-    if (s.ok()) {
-      put_response->set_value("OK!");
+    if (put_request->from_client()) {
+      return grpc::Status::OK;
+    } else {
+      rocksdb::Status s = db_->Put(WriteOptions(), 
+                                  put_request->key(), put_request->value());
+      if (s.ok()) {
+        put_response->set_value("OK");
+      } else {
+        put_response->set_value("NotOK");
+      }
+      return grpc::Status::OK;
     }
-    else {
-      put_response->set_value("Not OK!");
-    }
-    return grpc::Status::OK;
   }
 
 };

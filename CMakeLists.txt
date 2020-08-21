@@ -39,9 +39,17 @@ add_custom_command(
         "${proto}"
       DEPENDS "${proto}")
 
-foreach (_target
-  "${PROJECT_NAME}_server" "${PROJECT_NAME}_client")
-  add_executable(${_target} "src/${_target}.cc" src/server.cc src/replica.cc ${proto_srcs} ${grpc_srcs})
+foreach (_executable
+  server client)
+  set(_target  "${PROJECT_NAME}_${_executable}")
+  set(_common_srcs "src/${_target}.cc" "src/${_executable}.cc" ${proto_srcs} ${grpc_srcs})
+  if (_executable STREQUAL "server")
+    set(srcs "${_common_srcs}" "src/replica.cc")
+  else()
+    set(srcs ${_common_srcs}) 
+  endif()
+
+  add_executable(${_target} ${srcs})
   target_include_directories(${_target} PUBLIC ${PROJECT_BINARY_DIR})
   target_include_directories(${_target} PUBLIC ${PROJECT_SOURCE_DIR})
   target_link_libraries(${_target} PUBLIC pthread dl RocksDB::rocksdb gRPC::grpc++_reflection gRPC::grpc++ protobuf::libprotobuf stdc++fs)
