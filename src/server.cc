@@ -59,7 +59,8 @@ class StoreServiceImpl final : public Store::Service {
 
   grpc::Status Get(ServerContext* context, const GetRequest* get_request,
              GetResponse* get_response) override {
-    if (get_request->from_client()) {
+    if (!get_request->from_client()) {
+      // TODO
       return grpc::Status::OK;
     } else {
       std::string found_value;
@@ -79,7 +80,8 @@ class StoreServiceImpl final : public Store::Service {
 
   grpc::Status Put(ServerContext* context, const PutRequest* put_request,
              PutResponse* put_response) override {
-    if (put_request->from_client()) {
+    if (!put_request->from_client()) {
+      // TODO
       return grpc::Status::OK;
     } else {
       rocksdb::Status s = db_->Put(WriteOptions(), 
