@@ -1,5 +1,8 @@
 // Copyright (c) 2020 forkbase
 
+#ifndef DISTRKVS_CLIENT_H_
+#define DISTRKVS_CLIENT_H_
+
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -35,3 +38,5 @@ class DistrkvsClient {
 };
 
 }  // namespace distrkvs
+
+#endif  // DISTRKVS_CLIENT_H_
