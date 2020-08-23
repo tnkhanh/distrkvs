@@ -31,31 +31,17 @@ using distrkvs::PutRequest;
 using distrkvs::GetResponse;
 using distrkvs::PutResponse;
 
-namespace distrkvs::server {
+namespace distrkvs {
 // Logic and data behind the server's behavior.
 class StoreServiceImpl final : public Store::Service {
  public:
-  StoreServiceImpl(const std::string& kDBPath) : Store::Service() {
-    std::filesystem::create_directories(kDBPath);
-
-    Options options;
-    // Optimize RocksDB. This is the easiest way to get RocksDB to perform well
-    options.IncreaseParallelism();
-    options.OptimizeLevelStyleCompaction();
-    // create the DB if it's not already present
-    options.create_if_missing = true;
-
-    // open DB
-    rocksdb::Status s = DB::Open(options, kDBPath, &db_);
-    assert(s.ok());
-  }
-
-  ~StoreServiceImpl() {
-    delete db_;
+  StoreServiceImpl(DB* db, ServerConfig* config) 
+    : Store::Service(), db_(db), config_(config) {
   }
 
  private:
   DB* db_;
+  ServerConfig* config_;
 
   grpc::Status Get(ServerContext* context, const GetRequest* get_request,
              GetResponse* get_response) override {
@@ -97,15 +83,31 @@ class StoreServiceImpl final : public Store::Service {
 
 };
 
-void RunServer(const std::string& kDBPath, const std::string& kServerAddress) {
-  StoreServiceImpl service(kDBPath);
+DistrkvsServer::DistrkvsServer(const std::string& kDBPath, const std::string& kServerAddress) 
+  : server_address_(kServerAddress) {
+  std::filesystem::create_directories(kDBPath);
+
+  Options options;
+  // Optimize RocksDB. This is the easiest way to get RocksDB to perform well
+  options.IncreaseParallelism();
+  options.OptimizeLevelStyleCompaction();
+  // create the DB if it's not already present
+  options.create_if_missing = true;
+
+  // open DB
+  rocksdb::Status s = DB::Open(options, kDBPath, &db_);
+  assert(s.ok());
+}
+
+void DistrkvsServer::run() {
+  StoreServiceImpl service(db_, &config_);
 
   grpc::EnableDefaultHealthCheckService(true);
   grpc::reflection::InitProtoReflectionServerBuilderPlugin();
 
   ServerBuilder builder;
   // Listen on the given address without any authentication mechanism.
-  builder.AddListeningPort(kServerAddress, grpc::InsecureServerCredentials());
+  builder.AddListeningPort(server_address_, grpc::InsecureServerCredentials());
   // Register "service" as the instance through which we'll communicate with
   // clients. In this case it corresponds to an *synchronous* service.
   builder.RegisterService(&service);
@@ -116,4 +118,5 @@ void RunServer(const std::string& kDBPath, const std::string& kServerAddress) {
   // responsible for shutting down the server for this call to ever return.
   server->Wait();
 }
-}  // namespace distrkvs::server
+
+}  // namespace distrkvs

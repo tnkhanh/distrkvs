@@ -5,8 +5,26 @@
 
 #include <string>
 
-namespace distrkvs::server {
-void RunServer(const std::string& kDBPath, const std::string& kServerAddress); 
-}  // namespace distrkvs::server
+#include "rocksdb/db.h"
+
+using rocksdb::DB;
+
+struct ServerConfig {
+};
+
+namespace distrkvs {
+
+class DistrkvsServer {
+ public:
+  DistrkvsServer(const std::string& kDBPath, const std::string& kServerAddress);
+  void run(); 
+
+ private:
+  std::string server_address_;
+  ServerConfig config_;
+  DB* db_;
+};
+
+}  // namespace distrkvs
 
 #endif  // DISTRKVS_SERVER_H_

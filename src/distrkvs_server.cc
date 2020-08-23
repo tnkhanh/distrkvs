@@ -14,7 +14,9 @@ int main(int argc, char **argv) {
   const std::string kDBPath("/opt/database");
   const std::string kServerAddress("0.0.0.0:50017");
   std::cout<<"Server listening on " << kServerAddress << std::endl;
-  distrkvs::server::RunServer(kDBPath, kServerAddress);
+  
+  distrkvs::DistrkvsServer server(kDBPath, kServerAddress);
+  server.run();
 
   return 0;
 }
