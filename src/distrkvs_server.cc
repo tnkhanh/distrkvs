@@ -3,7 +3,6 @@
 #include <string>
 #include <iostream>
 
-#include "src/replica.h"
 #include "src/server.h"
 
 int main(int argc, char **argv) {
@@ -16,7 +15,7 @@ int main(int argc, char **argv) {
   std::cout<<"Server listening on " << kServerAddress << std::endl;
   
   distrkvs::DistrkvsServer server(kDBPath, kServerAddress);
-  server.run();
+  server.Run();
 
   return 0;
 }

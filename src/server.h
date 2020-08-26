@@ -4,24 +4,25 @@
 #define DISTRKVS_SERVER_H_
 
 #include <string>
+#include <vector>
+#include <set>
 
 #include "rocksdb/db.h"
 
-using rocksdb::DB;
+#include "cluster_config.h"
 
-struct ServerConfig {
-};
+using rocksdb::DB;
 
 namespace distrkvs {
 
 class DistrkvsServer {
  public:
   DistrkvsServer(const std::string& kDBPath, const std::string& kServerAddress);
-  void run(); 
+  void Run(); 
 
  private:
   std::string server_address_;
-  ServerConfig config_;
+  ClusterConfig config_;
   DB* db_;
 };
 

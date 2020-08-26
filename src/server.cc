@@ -16,6 +16,8 @@
 
 #include "store.grpc.pb.h"
 
+#include "cluster_config.h"
+
 using rocksdb::DB;
 using rocksdb::Options;
 using rocksdb::PinnableSlice;
@@ -35,13 +37,13 @@ namespace distrkvs {
 // Logic and data behind the server's behavior.
 class StoreServiceImpl final : public Store::Service {
  public:
-  StoreServiceImpl(DB* db, ServerConfig* config) 
+  StoreServiceImpl(DB* db, ClusterConfig* config) 
     : Store::Service(), db_(db), config_(config) {
   }
 
  private:
   DB* db_;
-  ServerConfig* config_;
+  ClusterConfig* config_;
 
   grpc::Status Get(ServerContext* context, const GetRequest* get_request,
              GetResponse* get_response) override {
@@ -99,7 +101,7 @@ DistrkvsServer::DistrkvsServer(const std::string& kDBPath, const std::string& kS
   assert(s.ok());
 }
 
-void DistrkvsServer::run() {
+void DistrkvsServer::Run() {
   StoreServiceImpl service(db_, &config_);
 
   grpc::EnableDefaultHealthCheckService(true);
