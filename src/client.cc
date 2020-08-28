@@ -30,9 +30,10 @@ namespace distrkvs {
 
 DistrkvsClient::DistrkvsClient(const std::string& kServerAddress)
     : stub_(
-        Store::NewStub(
-            grpc::CreateChannel(
-                kServerAddress + ":50017", grpc::InsecureChannelCredentials()))) {}
+          Store::NewStub(
+              grpc::CreateChannel(
+                  kServerAddress + ":50017",
+                  grpc::InsecureChannelCredentials()))) {}
 
 DStatus DistrkvsClient::Put(const KeyString& key, const ValueString& value) {
   PutRequest put_request;

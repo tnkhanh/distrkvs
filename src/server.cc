@@ -5,6 +5,8 @@
 #include <filesystem>
 #include <string>
 #include <memory>
+#include <iostream>
+#include <fstream>
 
 #include "rocksdb/db.h"
 #include "rocksdb/slice.h"
@@ -38,12 +40,12 @@ namespace distrkvs {
 class StoreServiceImpl final : public Store::Service {
  public:
   StoreServiceImpl(DB* db, ClusterConfig* config) 
-    : Store::Service(), db_(db), config_(config) {
-  }
+    : Store::Service(), db_(db), config_(config) {}
 
  private:
   DB* db_;
   ClusterConfig* config_;
+  std::unique_ptr<Store::Stub> stub_;
 
   grpc::Status Get(ServerContext* context, const GetRequest* get_request,
              GetResponse* get_response) override {
@@ -96,13 +98,35 @@ DistrkvsServer::DistrkvsServer(const std::string& kDBPath, const std::string& kS
   // create the DB if it's not already present
   options.create_if_missing = true;
 
-  // open DB
+  // open DB on construction
   rocksdb::Status s = DB::Open(options, kDBPath, &db_);
   assert(s.ok());
 }
 
+void DistrkvsServer::LoadConfigFromFile(const std::string& file_name) {
+  std::ifstream istream(file_name, std::ifstream::in);
+
+  if (!istream.is_open()) {
+    std::cout << "Failed to  open " << file_name << "\n";
+  } else {
+    int node_count, replica_count;
+    std::string node_name;
+
+    istream >> node_count;
+    for (int i=0; i < node_count; ++i) {
+      std::cin >> node_name >> replica_count;
+      config_.AddNode(node_name, replica_count);
+    }
+  }
+}
+
 void DistrkvsServer::Run() {
   StoreServiceImpl service(db_, &config_);
+
+  int node_count = config_.NodeCount();
+  for (int i=0; i < node_count; ++i) {
+    NodePtr node_ptr = config_.NodeAt(i);
+  }
 
   grpc::EnableDefaultHealthCheckService(true);
   grpc::reflection::InitProtoReflectionServerBuilderPlugin();

@@ -18,6 +18,7 @@ namespace distrkvs {
 class DistrkvsServer {
  public:
   DistrkvsServer(const std::string& kDBPath, const std::string& kServerAddress);
+  void LoadConfigFromFile(const std::string& file_name);
   void Run(); 
 
  private:
