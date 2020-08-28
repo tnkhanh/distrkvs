@@ -40,6 +40,7 @@ Replica::Replica(const std::string& key) {
 }
 
 void Replica::PrintHash() {
+  std::cout << node_ptr_ -> address << " " << replica_number_ << ": ";
   for (int i=0; i < 20; ++i) {
     printf("%02x ", SHA1_digest_[i]);
   }

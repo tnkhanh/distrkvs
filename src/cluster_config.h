@@ -47,9 +47,12 @@ class ClusterConfig {
   NodePtr PickNode(const std::string& key);
   int NodeCount();
   NodePtr NodeAt(int pos);
+
  private:
   std::vector<NodePtr> node_list_;
   std::set<Replica, ReplicaCompare> replica_set_;
+
+  friend class ClusterTest;
 };
 
 }  // namespace distrkvs

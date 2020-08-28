@@ -48,7 +48,7 @@ foreach (_executable
     set(srcs "${_common_srcs}" "src/cluster_config.cc")
     set(libs "${_common_libs}" "crypto")
   else()
-    set(srcs ${_common_srcs}) 
+    set(srcs ${_common_srcs})
     set(libs ${_common_libs})
   endif()
 
@@ -57,3 +57,10 @@ foreach (_executable
   target_include_directories(${_target} PUBLIC ${PROJECT_SOURCE_DIR})
   target_link_libraries(${_target} PUBLIC ${libs})
 endforeach()
+
+if (DEBUG)
+  add_executable(test tmp/test.cc src/cluster_config.cc ${proto_srcs} ${grpc_srcs})
+  target_link_libraries(test PUBLIC ${libs})
+  target_include_directories(test PUBLIC ${PROJECT_BINARY_DIR})
+  target_include_directories(test PUBLIC ${PROJECT_SOURCE_DIR})
+endif()
