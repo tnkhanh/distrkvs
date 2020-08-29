@@ -29,11 +29,6 @@ using rocksdb::ReadOptions;
 using grpc::Server;
 using grpc::ServerBuilder;
 using grpc::ServerContext;
-using distrkvs::Store;
-using distrkvs::GetRequest;
-using distrkvs::PutRequest;
-using distrkvs::GetResponse;
-using distrkvs::PutResponse;
 
 namespace distrkvs {
 // Logic and data behind the server's behavior.
@@ -45,23 +40,30 @@ class StoreServiceImpl final : public Store::Service {
  private:
   DB* db_;
   ClusterConfig* config_;
-  std::unique_ptr<Store::Stub> stub_;
 
   grpc::Status Get(ServerContext* context, const GetRequest* get_request,
              GetResponse* get_response) override {
-    if (!get_request->from_client()) {
-      // TODO
+    if (get_request->from_client()) {
+      NodePtr node = config_->PickNode(get_request->key());
+      std::string value;
+      node->InternalGet(get_request->key(), &value);
+      if (value=="") {
+        get_response->set_value("NotOK");
+      }
+      else {
+        get_response->set_value("OK " + value);
+      }
       return grpc::Status::OK;
     } else {
       std::string found_value;
       rocksdb::Status s = db_->Get(ReadOptions(), get_request->key(), &found_value);
 
       if (s.ok()) {
-        get_response->set_value("OK " + found_value);
+        get_response->set_value(found_value);
       } else if (s.IsNotFound()) {
-        get_response->set_value("Key not found");
+        get_response->set_value("");
       } else {
-        get_response->set_value("NotOK");
+        get_response->set_value("");
       }
 
       return grpc::Status::OK;
@@ -70,9 +72,10 @@ class StoreServiceImpl final : public Store::Service {
 
   grpc::Status Put(ServerContext* context, const PutRequest* put_request,
              PutResponse* put_response) override {
-    if (!put_request->from_client()) {
-      // TODO
-      return grpc::Status::OK;
+    if (put_request->from_client()) {
+      NodePtr node = config_->PickNode(put_request->key());
+      node->InternalPut(put_request->key(), put_request->value());
+      put_response->set_value("OK");
     } else {
       rocksdb::Status s = db_->Put(WriteOptions(), 
                                   put_request->key(), put_request->value());
@@ -81,8 +84,9 @@ class StoreServiceImpl final : public Store::Service {
       } else {
         put_response->set_value("NotOK");
       }
-      return grpc::Status::OK;
     }
+
+    return grpc::Status::OK;
   }
 
 };
@@ -122,11 +126,6 @@ void DistrkvsServer::LoadConfigFromFile(const std::string& file_name) {
 
 void DistrkvsServer::Run() {
   StoreServiceImpl service(db_, &config_);
-
-  int node_count = config_.NodeCount();
-  for (int i=0; i < node_count; ++i) {
-    NodePtr node_ptr = config_.NodeAt(i);
-  }
 
   grpc::EnableDefaultHealthCheckService(true);
   grpc::reflection::InitProtoReflectionServerBuilderPlugin();

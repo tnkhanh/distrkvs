@@ -20,11 +20,6 @@
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::Status;
-using distrkvs::Store;
-using distrkvs::GetRequest;
-using distrkvs::PutRequest;
-using distrkvs::GetResponse;
-using distrkvs::PutResponse;
 
 namespace distrkvs {
 

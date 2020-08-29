@@ -4,10 +4,11 @@
 
 #include <string>
 
-#include "grpcpp/grpcpp.h"
 #include "openssl/sha.h"
 
 #include "store.grpc.pb.h"
+
+#include "src/node.h"
 
 namespace distrkvs {
 
@@ -16,20 +17,12 @@ bool ReplicaCompare::operator()(const Replica& lhs, const Replica& rhs) const {
     if (lhs.SHA1_digest_[i] < rhs.SHA1_digest_[i]) return true;
     if (lhs.SHA1_digest_[i] > rhs.SHA1_digest_[i]) return false;
   }
-  return true;
+  return false;
 }
-
-Node::Node(const AddressString& addr, int rep_count) 
-    : address(addr), replica_count(rep_count),
-      stub(
-          Store::NewStub(
-              grpc::CreateChannel(
-                  addr + ":50017",
-                  grpc::InsecureChannelCredentials()))){}
 
 Replica::Replica(NodePtr node_ptr, int replica_number)
     : node_ptr_(node_ptr), replica_number_(replica_number) {
-  AddressString hash_input(node_ptr->address);
+  AddressString hash_input(node_ptr->address());
   hash_input.append(1, '_');
   hash_input.append(std::to_string(replica_number));
   SHA1((reinterpret_cast<const unsigned char*>(&hash_input[0])), hash_input.size(), SHA1_digest_);
@@ -39,8 +32,8 @@ Replica::Replica(const std::string& key) {
   SHA1((reinterpret_cast<const unsigned char*>(&key[0])), key.size(), SHA1_digest_);
 }
 
-void Replica::PrintHash() {
-  std::cout << node_ptr_ -> address << " " << replica_number_ << ": ";
+void Replica::PrintHash() const {
+  std::cout << node_ptr_ -> address() << " " << replica_number_ << ": ";
   for (int i=0; i < 20; ++i) {
     printf("%02x ", SHA1_digest_[i]);
   }
@@ -58,7 +51,10 @@ void ClusterConfig::AddNode(const AddressString& address, int replica_count) {
 }
 
 NodePtr ClusterConfig::PickNode(const std::string& key) {
-  return node_list_[0];
+  Replica dummy(key);
+  auto replica_ptr = replica_set_.lower_bound(dummy);
+  if (replica_ptr == replica_set_.end()) replica_ptr = replica_set_.begin();
+  return replica_ptr->node_ptr_;
 }
 
 int ClusterConfig::NodeCount() {

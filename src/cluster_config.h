@@ -10,24 +10,15 @@
 
 #include "store.grpc.pb.h"
 
+#include "src/node.h"
+
 namespace distrkvs {
-
-using AddressString = std::string;
-
-struct Node {
-  AddressString address;
-  int replica_count;
-  std::unique_ptr<Store::Stub> stub;
-  Node(const AddressString& addr, int rep_count);
-};
-
-using NodePtr = std::shared_ptr<const Node>;
 
 class Replica {
  public:
   Replica(NodePtr node_ptr, int replica_number);
   Replica(const std::string& key);
-  void PrintHash();
+  void PrintHash() const;
 
  private:
   NodePtr node_ptr_;
@@ -35,6 +26,7 @@ class Replica {
   unsigned char SHA1_digest_[20];
 
   friend class ReplicaCompare;
+  friend class ClusterConfig;
 };
 
 struct ReplicaCompare{

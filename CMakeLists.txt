@@ -45,7 +45,7 @@ foreach (_executable
   set(_common_srcs "src/${_target}.cc" "src/${_executable}.cc" ${proto_srcs} ${grpc_srcs})
   set(_common_libs pthread dl RocksDB::rocksdb gRPC::grpc++_reflection gRPC::grpc++ protobuf::libprotobuf stdc++fs)
   if (_executable STREQUAL "server")
-    set(srcs "${_common_srcs}" "src/cluster_config.cc")
+    set(srcs "${_common_srcs}" "src/cluster_config.cc" "src/node.cc")
     set(libs "${_common_libs}" "crypto")
   else()
     set(srcs ${_common_srcs})
@@ -59,7 +59,7 @@ foreach (_executable
 endforeach()
 
 if (DEBUG)
-  add_executable(test tmp/test.cc src/cluster_config.cc ${proto_srcs} ${grpc_srcs})
+  add_executable(test tmp/test.cc src/cluster_config.cc src/node.cc ${proto_srcs} ${grpc_srcs})
   target_link_libraries(test PUBLIC ${libs})
   target_include_directories(test PUBLIC ${PROJECT_BINARY_DIR})
   target_include_directories(test PUBLIC ${PROJECT_SOURCE_DIR})
