@@ -15,7 +15,7 @@ message GetRequest {
 }
 
 message GetResponse {
-  string value = 1;
+  string value = 2;
 }
 
 message PutRequest {
@@ -25,5 +25,4 @@ message PutRequest {
 }
 
 message PutResponse {
-  string value = 1;
 }

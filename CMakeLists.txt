@@ -59,6 +59,7 @@ foreach (_executable
 endforeach()
 
 if (DEBUG)
+  add_compile_definitions(DEBUG)
   add_executable(test tmp/test.cc src/cluster_config.cc src/node.cc ${proto_srcs} ${grpc_srcs})
   target_link_libraries(test PUBLIC ${libs})
   target_include_directories(test PUBLIC ${PROJECT_BINARY_DIR})

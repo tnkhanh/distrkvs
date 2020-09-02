@@ -1,5 +1,6 @@
 build/
 xuild/
+duild/
 *.o
 *.h.gch
 *.swp

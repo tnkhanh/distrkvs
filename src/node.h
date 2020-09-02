@@ -8,6 +8,8 @@
 #include <vector>
 #include <memory>
 
+#include "grpcpp/grpcpp.h"
+
 #include "store.grpc.pb.h"
 
 namespace distrkvs {
@@ -18,8 +20,8 @@ class Node {
  public:
   Node(const AddressString& address, int replica_count);
   AddressString& address();
-  void InternalPut(const std::string& key, const std::string& value);
-  void InternalGet(const std::string& key, std::string* value);
+  grpc::Status InternalPut(const std::string& key, const std::string& value);
+  grpc::Status InternalGet(const std::string& key, std::string* value);
 
  private:
   AddressString address_;

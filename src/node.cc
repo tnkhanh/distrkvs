@@ -27,7 +27,7 @@ AddressString& Node::address() {
   return address_;
 }
 
-void Node::InternalPut(const std::string& key, const std::string& value) {
+grpc::Status Node::InternalPut(const std::string& key, const std::string& value) {
   PutRequest put_request;
   put_request.set_key(key);
   put_request.set_value(value);
@@ -37,12 +37,10 @@ void Node::InternalPut(const std::string& key, const std::string& value) {
   ClientContext context;
 
   grpc::Status status = stub_->Put(&context, put_request, &reply);
-  if (status.ok()) {
-  } else {
-  }
+  return status;
 }
 
-void Node::InternalGet(const std::string& key, std::string* value) {
+grpc::Status Node::InternalGet(const std::string& key, std::string* value) {
   GetRequest get_request;
   get_request.set_key(key);
   get_request.set_from_client(false);
@@ -51,13 +49,8 @@ void Node::InternalGet(const std::string& key, std::string* value) {
   ClientContext context;
 
   grpc::Status status = stub_->Get(&context, get_request, &reply);
-  if (status.ok()) {
-    if (reply.value().substr(0, 3) == "OK ") {
-      *value = reply.value().substr(3);
-    } else {
-    }
-  } else {
-  }
+  *value = reply.value();
+  return status;
 }
 
 }  // namespace distrkvs

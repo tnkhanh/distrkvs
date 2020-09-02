@@ -18,7 +18,6 @@
 
 using distrkvs::KeyString;
 using distrkvs::ValueString;
-using distrkvs::DStatus;
 
 int main(int argc, char **argv) {
   std::ios_base::sync_with_stdio(false);
@@ -32,7 +31,7 @@ int main(int argc, char **argv) {
   std::string comm;
   KeyString key;
   ValueString value;
-  DStatus status;
+  grpc::Status status;
 
   while (true) {
     std::cin>>comm;
@@ -40,23 +39,13 @@ int main(int argc, char **argv) {
       std::cout<<"Put: ";
       std::cin>>key>>value;
       status = client.Put(key, value);
-      if (status==DStatus::kOk) {
-        std::cout << "OK!\n";
-      } else {
-        std::cout << "Not OK!\n";
-      }
-
+      std::cout << status.error_message() <<" Done!\n"; 
     } else if (comm=="Get") {
       std::cout<<"Get: ";
       std::cin>>key;
       status = client.Get(key, &value);
-      if (status==DStatus::kOk) {
-        std::cout << "OK!\n";
-        std::cout << "Value: " << value << "\n";
-      } else {
-        std::cout << "Not OK!\n";
-      }
-
+      std::cout << "Value: " << value <<"\n" 
+          << status.error_message() <<" Done!\n"; 
     } else if (comm=="Quit" || comm=="Exit") {
       break;
     } else {

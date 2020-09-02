@@ -46,27 +46,16 @@ class StoreServiceImpl final : public Store::Service {
     if (get_request->from_client()) {
       NodePtr node = config_->PickNode(get_request->key());
       std::string value;
-      node->InternalGet(get_request->key(), &value);
-      if (value=="") {
-        get_response->set_value("NotOK");
-      }
-      else {
-        get_response->set_value("OK " + value);
-      }
-      return grpc::Status::OK;
+
+      grpc::Status status = node->InternalGet(get_request->key(), &value);
+      get_response->set_value(value);
+      return grpc::Status(grpc::StatusCode::OK, status.error_message());
     } else {
       std::string found_value;
       rocksdb::Status s = db_->Get(ReadOptions(), get_request->key(), &found_value);
-
-      if (s.ok()) {
-        get_response->set_value(found_value);
-      } else if (s.IsNotFound()) {
-        get_response->set_value("");
-      } else {
-        get_response->set_value("");
-      }
-
-      return grpc::Status::OK;
+     
+      get_response->set_value(found_value);
+      return grpc::Status(grpc::StatusCode::OK, s.ToString());
     }
   }
 
@@ -74,21 +63,14 @@ class StoreServiceImpl final : public Store::Service {
              PutResponse* put_response) override {
     if (put_request->from_client()) {
       NodePtr node = config_->PickNode(put_request->key());
-      node->InternalPut(put_request->key(), put_request->value());
-      put_response->set_value("OK");
+      return node->InternalPut(put_request->key(), put_request->value());
     } else {
       rocksdb::Status s = db_->Put(WriteOptions(), 
                                   put_request->key(), put_request->value());
-      if (s.ok()) {
-        put_response->set_value("OK");
-      } else {
-        put_response->set_value("NotOK");
-      }
+
+      return grpc::Status(grpc::StatusCode::OK, s.ToString());
     }
-
-    return grpc::Status::OK;
   }
-
 };
 
 DistrkvsServer::DistrkvsServer(const std::string& kDBPath, const std::string& kServerAddress) 
@@ -118,8 +100,11 @@ void DistrkvsServer::LoadConfigFromFile(const std::string& file_name) {
 
     istream >> node_count;
     for (int i=0; i < node_count; ++i) {
-      std::cin >> node_name >> replica_count;
+      istream >> node_name >> replica_count;
       config_.AddNode(node_name, replica_count);
+      #ifdef DEBUG
+      std::cout << "Node: " << node_name << " | Replica count: " << replica_count << "\n";
+      #endif
     }
   }
 }

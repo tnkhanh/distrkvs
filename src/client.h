@@ -30,8 +30,8 @@ class DistrkvsClient {
  public:
   explicit DistrkvsClient(const std::string& kServerAddress);
 
-  DStatus Put(const KeyString& key, const ValueString& value);
-  DStatus Get(const KeyString& key, ValueString* value);
+  grpc::Status Put(const KeyString& key, const ValueString& value);
+  grpc::Status Get(const KeyString& key, ValueString* value);
 
  private:
   std::unique_ptr<Store::Stub> stub_;
