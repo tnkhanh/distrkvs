@@ -26,24 +26,23 @@ Replica::Replica(NodePtr node_ptr, int replica_number)
   hash_input.append(1, '_');
   hash_input.append(std::to_string(replica_number));
   SHA1((reinterpret_cast<const unsigned char*>(&hash_input[0])), hash_input.size(), SHA1_digest_);
-  #ifdef DEBUG
+#ifdef DEBUG
   PrintHash();
-  #endif
+#endif
 }
 
 Replica::Replica(const std::string& key) {
   SHA1((reinterpret_cast<const unsigned char*>(&key[0])), key.size(), SHA1_digest_);
-  #ifdef DEBUG
+#ifdef DEBUG
   std::cout << "Key: " << key << " | " << std::endl;
   PrintHash();
-  #endif
+#endif
 }
 
 void Replica::PrintHash() const {
+  std::cout << "Hash: ";
   if (node_ptr_)
-    std::cout << node_ptr_ -> address() << ": " << replica_number_ << std::endl;
-  else
-    std::cout <<"No node!" << std::endl;
+    std::cout << node_ptr_ -> address() << " " << replica_number_ << ":" << std::endl;
   char buf[10]{};
   std::string hash;
   for (int i=0; i < 20; ++i) {
@@ -67,9 +66,9 @@ NodePtr ClusterConfig::PickNode(const std::string& key) {
   Replica dummy(key);
   auto replica_ptr = replica_set_.lower_bound(dummy);
   if (replica_ptr == replica_set_.end()) replica_ptr = replica_set_.begin();
-  #ifdef DEBUG
+#ifdef DEBUG
   replica_ptr->PrintHash();
-  #endif
+#endif
   return replica_ptr->node_ptr_;
 }
 

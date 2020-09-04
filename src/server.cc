@@ -49,13 +49,25 @@ class StoreServiceImpl final : public Store::Service {
 
       grpc::Status status = node->InternalGet(get_request->key(), &value);
       get_response->set_value(value);
-      return grpc::Status(grpc::StatusCode::OK, status.error_message());
+      return status;
     } else {
-      std::string found_value;
-      rocksdb::Status s = db_->Get(ReadOptions(), get_request->key(), &found_value);
+      std::string value;
+      rocksdb::Status s = 
+        db_->Get(ReadOptions(), get_request->key(), &value);
      
-      get_response->set_value(found_value);
-      return grpc::Status(grpc::StatusCode::OK, s.ToString());
+      get_response->set_value(value);
+#ifdef DEBUG
+      std::cout << "Get: Key: " << get_request->key() << " | Value: " 
+                << value << std::endl; 
+      std::cout << "RocksDB: " << s.ToString() << std::endl;
+#endif
+      if (s.ok()) {
+        return grpc::Status::OK;
+      } else if (s.IsNotFound()) {
+        return grpc::Status(grpc::StatusCode::NOT_FOUND, s.ToString());
+      } else {
+        return grpc::Status(grpc::StatusCode::ABORTED, s.ToString());
+      }
     }
   }
 
@@ -67,8 +79,16 @@ class StoreServiceImpl final : public Store::Service {
     } else {
       rocksdb::Status s = db_->Put(WriteOptions(), 
                                   put_request->key(), put_request->value());
-
-      return grpc::Status(grpc::StatusCode::OK, s.ToString());
+#ifdef DEBUG
+      std::cout << "Put: Key: " << put_request->key() << " | Value: " 
+                << put_request->value() << std::endl; 
+      std::cout << "RocksDB: " << s.ToString() << std::endl;
+#endif
+      if (s.ok()) {
+        return grpc::Status::OK;
+      } else {
+        return grpc::Status(grpc::StatusCode::ABORTED, s.ToString());
+      }
     }
   }
 };
@@ -102,9 +122,9 @@ void DistrkvsServer::LoadConfigFromFile(const std::string& file_name) {
     for (int i=0; i < node_count; ++i) {
       istream >> node_name >> replica_count;
       config_.AddNode(node_name, replica_count);
-      #ifdef DEBUG
+#ifdef DEBUG
       std::cout << "Node: " << node_name << " | Replica count: " << replica_count << "\n";
-      #endif
+#endif
     }
   }
 }
