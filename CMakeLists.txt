@@ -56,10 +56,13 @@ foreach (_executable
   endif()
 
   add_executable(${_target} ${srcs})
-  target_include_directories(${_target} PUBLIC ${PROJECT_BINARY_DIR})
-  target_include_directories(${_target} PUBLIC ${PROJECT_SOURCE_DIR})
+  target_include_directories(${_target} PUBLIC ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
   target_link_libraries(${_target} PUBLIC ${libs})
 endforeach()
+
+add_library(${PROJECT_NAME} SHARED ${proto_srcs} ${grpc_srcs} src/client.cc)
+target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
+target_link_libraries(${PROJECT_NAME} PUBLIC ${_common_libs})
 
 if (DEBUG)
   add_compile_definitions(DEBUG)
