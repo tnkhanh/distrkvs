@@ -11,12 +11,12 @@ int main(int argc, char **argv) {
   std::cout << "C++ Standard: " << __cplusplus << "\n";
 
   const std::string kDBPath("/opt/database");
-  const std::string kServerAddress("0.0.0.0:50017");
- 
+  const std::string kServerAddress(argc > 1 ? argv[1] : "0.0.0.0");
+
   distrkvs::DistrkvsServer server(kDBPath, kServerAddress);
   server.LoadConfigFromFile("config.txt");
 
-  std::cout<<"Server listening on " << kServerAddress << std::endl;
+  std::cout<<"Server listening on " << kServerAddress << ":50017" << std::endl;
   server.Run();
 
   return 0;

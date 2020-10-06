@@ -18,7 +18,7 @@
 
 #include "store.grpc.pb.h"
 
-#include "cluster_config.h"
+#include "node_config.h"
 
 using rocksdb::DB;
 using rocksdb::Options;
@@ -34,12 +34,12 @@ namespace distrkvs {
 // Logic and data behind the server's behavior.
 class StoreServiceImpl final : public Store::Service {
  public:
-  StoreServiceImpl(DB* db, ClusterConfig* config) 
+  StoreServiceImpl(DB* db, NodeConfig* config) 
     : Store::Service(), db_(db), config_(config) {}
 
  private:
   DB* db_;
-  ClusterConfig* config_;
+  NodeConfig* config_;
 
   grpc::Status Get(ServerContext* context, const GetRequest* get_request,
              GetResponse* get_response) override {
@@ -137,7 +137,7 @@ void DistrkvsServer::Run() {
 
   ServerBuilder builder;
   // Listen on the given address without any authentication mechanism.
-  builder.AddListeningPort(server_address_, grpc::InsecureServerCredentials());
+  builder.AddListeningPort(server_address_ + ":50017", grpc::InsecureServerCredentials());
   // Register "service" as the instance through which we'll communicate with
   // clients. In this case it corresponds to an *synchronous* service.
   builder.RegisterService(&service);

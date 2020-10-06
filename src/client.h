@@ -9,10 +9,6 @@
 
 #include "grpcpp/grpcpp.h"
 
-#include "rocksdb/db.h"
-#include "rocksdb/slice.h"
-#include "rocksdb/options.h"
-
 #include "store.grpc.pb.h"
 
 namespace distrkvs {

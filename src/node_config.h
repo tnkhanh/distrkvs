@@ -1,7 +1,7 @@
 // Copyright (c) 2020 forkbase
 
-#ifndef DISTRKVS_CLUSTER_CONFIG_H_
-#define DISTRKVS_CLUSTER_CONFIG_H_
+#ifndef DISTRKVS_NODE_CONFIG_H_
+#define DISTRKVS_NODE_CONFIG_H_
 
 #include <string>
 #include <set>
@@ -26,14 +26,14 @@ class Replica {
   unsigned char SHA1_digest_[20];
 
   friend class ReplicaCompare;
-  friend class ClusterConfig;
+  friend class NodeConfig;
 };
 
 struct ReplicaCompare{
   bool operator()(const Replica& lhs, const Replica& rhs) const;
 };
 
-class ClusterConfig {
+class NodeConfig {
  public:
   void AddNode(const std::string& address, int replica_count);
   NodePtr PickNode(const std::string& key);
@@ -44,7 +44,7 @@ class ClusterConfig {
   std::vector<NodePtr> node_list_;
   std::set<Replica, ReplicaCompare> replica_set_;
 
-  friend class ClusterTest;
+  friend class NodeTest;
 };
 
 }  // namespace distrkvs

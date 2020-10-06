@@ -7,6 +7,7 @@ package distrkvs;
 service Store {
   rpc Get (GetRequest) returns (GetResponse) {}
   rpc Put (PutRequest) returns (PutResponse) {}
+  rpc Join (JoinRequest) returns (JoinResponse) {}
 }
 
 message GetRequest {
@@ -25,4 +26,11 @@ message PutRequest {
 }
 
 message PutResponse {
+}
+
+message JoinRequest {
+  string address = 1;
+}
+
+message JoinResponse {
 }

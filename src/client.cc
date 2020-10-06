@@ -11,10 +11,6 @@
 #include "grpcpp/health_check_service_interface.h"
 #include "grpcpp/ext/proto_server_reflection_plugin.h"
 
-#include "rocksdb/db.h"
-#include "rocksdb/slice.h"
-#include "rocksdb/options.h"
-
 #include "store.grpc.pb.h"
 
 using grpc::Channel;

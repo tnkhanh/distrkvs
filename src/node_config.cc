@@ -1,6 +1,6 @@
 // Copyright (c) 2020 forkbase
 
-#include "cluster_config.h"
+#include "node_config.h"
 
 #include <string>
 
@@ -53,7 +53,7 @@ void Replica::PrintHash() const {
   std::cout << hash << std::endl;
 }
 
-void ClusterConfig::AddNode(const AddressString& address, int replica_count) {
+void NodeConfig::AddNode(const AddressString& address, int replica_count) {
   NodePtr ptr = std::make_shared<Node>(Node(address, replica_count));
   node_list_.push_back(ptr);
 
@@ -62,7 +62,7 @@ void ClusterConfig::AddNode(const AddressString& address, int replica_count) {
   }
 }
 
-NodePtr ClusterConfig::PickNode(const std::string& key) {
+NodePtr NodeConfig::PickNode(const std::string& key) {
   Replica dummy(key);
   auto replica_ptr = replica_set_.lower_bound(dummy);
   if (replica_ptr == replica_set_.end()) replica_ptr = replica_set_.begin();
@@ -72,11 +72,11 @@ NodePtr ClusterConfig::PickNode(const std::string& key) {
   return replica_ptr->node_ptr_;
 }
 
-int ClusterConfig::NodeCount() {
+int NodeConfig::NodeCount() {
   return node_list_.size();
 }
 
-NodePtr ClusterConfig::NodeAt(int pos) {
+NodePtr NodeConfig::NodeAt(int pos) {
   return node_list_[pos];
 }
 

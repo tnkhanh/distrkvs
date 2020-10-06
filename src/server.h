@@ -9,7 +9,7 @@
 
 #include "rocksdb/db.h"
 
-#include "cluster_config.h"
+#include "node_config.h"
 
 using rocksdb::DB;
 
@@ -23,7 +23,7 @@ class DistrkvsServer {
 
  private:
   std::string server_address_;
-  ClusterConfig config_;
+  NodeConfig config_;
   DB* db_;
 };
 
