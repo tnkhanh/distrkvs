@@ -22,9 +22,9 @@ enum DStatus{
   kNotOk
 };
 
-class DistrkvsClient {
+class DClient {
  public:
-  explicit DistrkvsClient(const std::string& kServerAddress);
+  explicit DClient(const std::string& kServerAddress);
 
   grpc::Status Put(const KeyString& key, const ValueString& value);
   grpc::Status Get(const KeyString& key, ValueString* value);

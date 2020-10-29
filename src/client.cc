@@ -19,14 +19,14 @@ using grpc::Status;
 
 namespace distrkvs {
 
-DistrkvsClient::DistrkvsClient(const std::string& kServerAddress)
+DClient::DClient(const std::string& kServerAddress)
     : stub_(
           Store::NewStub(
               grpc::CreateChannel(
                   kServerAddress + ":50017",
                   grpc::InsecureChannelCredentials()))) {}
 
-grpc::Status DistrkvsClient::Put(const KeyString& key, const ValueString& value) {
+grpc::Status DClient::Put(const KeyString& key, const ValueString& value) {
   PutRequest put_request;
   put_request.set_key(key);
   put_request.set_value(value);
@@ -38,7 +38,7 @@ grpc::Status DistrkvsClient::Put(const KeyString& key, const ValueString& value)
   return stub_->Put(&context, put_request, &reply);
 }
 
-grpc::Status DistrkvsClient::Get(const KeyString& key, ValueString* value) {
+grpc::Status DClient::Get(const KeyString& key, ValueString* value) {
   GetRequest get_request;
   get_request.set_key(key);
   get_request.set_from_client(true);

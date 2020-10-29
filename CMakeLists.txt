@@ -48,7 +48,7 @@ foreach (_executable
   set(_common_srcs "src/${_target}.cc" "src/${_executable}.cc" ${proto_srcs} ${grpc_srcs})
   set(_common_libs pthread dl RocksDB::rocksdb gRPC::grpc++_reflection gRPC::grpc++ protobuf::libprotobuf stdc++fs)
   if (_executable STREQUAL "server")
-    set(srcs "${_common_srcs}" "src/node_config.cc" "src/node.cc")
+    set(srcs "${_common_srcs}" "src/store_service_impl.cc")
     set(libs "${_common_libs}" "crypto")
   else()
     set(srcs ${_common_srcs})

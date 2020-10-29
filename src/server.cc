@@ -18,7 +18,8 @@
 
 #include "store.grpc.pb.h"
 
-#include "node_config.h"
+#include "store_service_impl.h"
+#include "hash_id.h"
 
 using rocksdb::DB;
 using rocksdb::Options;
@@ -31,71 +32,58 @@ using grpc::ServerBuilder;
 using grpc::ServerContext;
 
 namespace distrkvs {
-// Logic and data behind the server's behavior.
-class StoreServiceImpl final : public Store::Service {
- public:
-  StoreServiceImpl(DB* db, NodeConfig* config) 
-    : Store::Service(), db_(db), config_(config) {}
 
- private:
-  DB* db_;
-  NodeConfig* config_;
+DNode::DNode(const std::string& address) : address_(address) {
+  id_.hash(address_);
+}
 
-  grpc::Status Get(ServerContext* context, const GetRequest* get_request,
-             GetResponse* get_response) override {
-    if (get_request->from_client()) {
-      NodePtr node = config_->PickNode(get_request->key());
-      std::string value;
-
-      grpc::Status status = node->InternalGet(get_request->key(), &value);
-      get_response->set_value(value);
-      return status;
-    } else {
-      std::string value;
-      rocksdb::Status s = 
-        db_->Get(ReadOptions(), get_request->key(), &value);
-     
-      get_response->set_value(value);
-#ifdef DEBUG
-      std::cout << "Get: Key: " << get_request->key() << " | Value: " 
-                << value << std::endl; 
-      std::cout << "RocksDB: " << s.ToString() << std::endl;
-#endif
-      if (s.ok()) {
-        return grpc::Status::OK;
-      } else if (s.IsNotFound()) {
-        return grpc::Status(grpc::StatusCode::NOT_FOUND, s.ToString());
-      } else {
-        return grpc::Status(grpc::StatusCode::ABORTED, s.ToString());
-      }
-    }
+bool DNode::in_range(const DNode& left, const DNode& right) {
+  if (left < *this) {
+    return (*this) < right || right < left;
+  } else {
+    return (*this) < right && right < left;
   }
+}
 
-  grpc::Status Put(ServerContext* context, const PutRequest* put_request,
-             PutResponse* put_response) override {
-    if (put_request->from_client()) {
-      NodePtr node = config_->PickNode(put_request->key());
-      return node->InternalPut(put_request->key(), put_request->value());
-    } else {
-      rocksdb::Status s = db_->Put(WriteOptions(), 
-                                  put_request->key(), put_request->value());
-#ifdef DEBUG
-      std::cout << "Put: Key: " << put_request->key() << " | Value: " 
-                << put_request->value() << std::endl; 
-      std::cout << "RocksDB: " << s.ToString() << std::endl;
-#endif
-      if (s.ok()) {
-        return grpc::Status::OK;
-      } else {
-        return grpc::Status(grpc::StatusCode::ABORTED, s.ToString());
-      }
-    }
-  }
-};
+AddressString DNode::address() {
+  return address_;
+}
 
-DistrkvsServer::DistrkvsServer(const std::string& kDBPath, const std::string& kServerAddress) 
-  : server_address_(kServerAddress) {
+HashId DNode::id() {
+  return id_;
+}
+
+bool operator < (const DNode& n1, const DNode& n2) {
+  return n1.id_ < n2.id_;
+}
+
+DServer::DServer(const std::string& kDBPath, const std::string& kAddress) 
+  : address_(kAddress) {
   std::filesystem::create_directories(kDBPath);
+
+  my_id_.resize(SHA256_DIGEST_LENGTH);
+
+  SHA256(reinterpret_cast<const unsigned char*>(&address_[0]),
+         address_.size(), &my_id_[0]);
+
+  for (int i=1; i <= kMBit; ++i) {
+    // TODO: maybe put this in a function 
+    finger_[i].start = my_id_;
+    int mod = (i - 1) % (sizeof unsigned char),
+        offset = (i - 1) / (sizeof unsigned char);
+
+    int ind = SHA256_DIGEST_LENGTH - 1 - offset;
+
+    finger_[i].start[ind] += (1 << mod);
+    if (finger_[i].start[ind] < (1 << mod)) {
+      while (true) {
+        --ind;
+        if (ind < 0) break;
+        finger_[i].start[ind]++;
+        if (finger_[i].start[ind]!=0) break;
+      }
+    }
+  }
 
   Options options;
   // Optimize RocksDB. This is the easiest way to get RocksDB to perform well
@@ -109,27 +97,7 @@ DistrkvsServer::DistrkvsServer(const std::string& kDBPath, const std::string& kS
   assert(s.ok());
 }
 
-void DistrkvsServer::LoadConfigFromFile(const std::string& file_name) {
-  std::ifstream istream(file_name, std::ifstream::in);
-
-  if (!istream.is_open()) {
-    std::cout << "Failed to  open " << file_name << "\n";
-  } else {
-    int node_count, replica_count;
-    std::string node_name;
-
-    istream >> node_count;
-    for (int i=0; i < node_count; ++i) {
-      istream >> node_name >> replica_count;
-      config_.AddNode(node_name, replica_count);
-#ifdef DEBUG
-      std::cout << "Node: " << node_name << " | Replica count: " << replica_count << "\n";
-#endif
-    }
-  }
-}
-
-void DistrkvsServer::Run() {
+void DServer::Run() {
   StoreServiceImpl service(db_, &config_);
 
   grpc::EnableDefaultHealthCheckService(true);
@@ -137,7 +105,7 @@ void DistrkvsServer::Run() {
 
   ServerBuilder builder;
   // Listen on the given address without any authentication mechanism.
-  builder.AddListeningPort(server_address_ + ":50017", grpc::InsecureServerCredentials());
+  builder.AddListeningPort(address_ + ":50017", grpc::InsecureServerCredentials());
   // Register "service" as the instance through which we'll communicate with
   // clients. In this case it corresponds to an *synchronous* service.
   builder.RegisterService(&service);
@@ -147,6 +115,75 @@ void DistrkvsServer::Run() {
   // Wait for the server to shutdown. Note that some other thread must be
   // responsible for shutting down the server for this call to ever return.
   server->Wait();
+}
+
+void DServer::Join(const AddressString& known_node_address) {
+  if (known_node_address.size()) {
+    InitFingerTable(known_node_address);
+    UpdateOthers();
+
+    // TODO: move keys in (predecessor, n] from successor to n
+  }
+  else {
+    for (int i=1; i<=kMBit; ++i) {
+      finger_[i].node.address = address_;
+      finger_[i].node.id = my_id_;
+    }
+
+    predecessor_.address = address_;
+    predecessor_.id = my_id_;
+/*
+      stub_(
+          Store::NewStub(
+              grpc::CreateChannel(
+                  address + kDefaultPort,
+                  grpc::InsecureChannelCredentials()))){
+                  */
+  }
+}
+
+AddressString DServer::FindSuccessor(const HashId& id) {
+  AddressString peer = FindPredecessor(id);
+  std::unique_ptr<Store::Stub> stub = Store::NewStub(
+      grpc::CreateChannel(peer, grpc::InsecureChannelCredentials()));
+
+  RequestWithId request;
+  request.set_id(id.grpc_bytes());
+  AddressResponse response;
+  grpc::Status status = stub->Successor(&client_context_, request, &response);
+
+  return response.address();
+}
+
+AddressString DServer::FindPredecessor(const HashId& id) {
+  AddressString peer = address_;
+  while (true) {
+  }
+
+  return peer;
+}
+
+AddressString DServer::ClosestPrecedingFinger(const HashId& id) {
+}
+
+AddressString DServer::successor() {
+  return finger_[1].node.address;
+}
+
+AddressString DServer::predecessor() {
+  return predecessor_.address;
+}
+
+void DServer::set_predecessor(const AddressString& node_address) {
+}
+
+void DServer::InitFingerTable(const AddressString& known_node_address) {
+}
+
+void DServer::UpdateOthers() {
+}
+
+void DServer::UpdateFingerTable(const AddressString& node_address, int index) {
 }
 
 }  // namespace distrkvs
