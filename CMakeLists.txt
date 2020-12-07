@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -O2 -W -Wextra -Wall -Wsign-compare -Wshadow")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter -Wno-unused-variable -Woverloaded-virtual -Wnon-virtual-dtor -Wno-missing-field-initializers -Wno-strict-aliasing")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -rdynamic")
 
 # assumes protobuf is installed
 set(protobuf_MODULE_COMPATIBLE TRUE)
@@ -48,7 +49,7 @@ foreach (_executable
   set(_common_srcs "src/${_target}.cc" "src/${_executable}.cc" ${proto_srcs} ${grpc_srcs})
   set(_common_libs pthread dl RocksDB::rocksdb gRPC::grpc++_reflection gRPC::grpc++ protobuf::libprotobuf stdc++fs)
   if (_executable STREQUAL "server")
-    set(srcs "${_common_srcs}" "src/store_service_impl.cc")
+    set(srcs "${_common_srcs}" "src/store_service_impl.cc" "src/hash_id.cc")
     set(libs "${_common_libs}" "crypto")
   else()
     set(srcs ${_common_srcs})
@@ -67,3 +68,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC ${_common_libs})
 if (DEBUG)
   add_compile_definitions(DEBUG)
 endif()
+
+add_executable(test src/test.cc src/hash_id.cc)
+target_link_libraries(test PUBLIC crypto)

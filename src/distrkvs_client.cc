@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
   std::cout << "Distrkvs client\n";
   std::cout << "C++ Standard: " << __cplusplus << "\n";
 
-  const std::string kServerAddress(argc > 1 ? argv[1] : "localhost");
+  const std::string kServerAddress(argc > 1 ? argv[1] : "localhost:50017");
   distrkvs::DClient client(kServerAddress);
 
   std::string comm;

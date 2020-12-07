@@ -33,8 +33,9 @@ using grpc::ServerContext;
 
 namespace distrkvs {
 
-DNode::DNode(const std::string& address) : address_(address) {
-  id_.hash(address_);
+DNode::DNode() {}
+
+DNode::DNode(const std::string& address) : address_(address), id_(KeyWrapper(&address_)) {
 }
 
 bool DNode::in_range(const DNode& left, const DNode& right) {
@@ -58,33 +59,12 @@ bool operator < (const DNode& n1, const DNode& n2) {
 }
 
 DServer::DServer(const std::string& kDBPath, const std::string& kAddress) 
-  : address_(kAddress) {
-  std::filesystem::create_directories(kDBPath);
-
-  my_id_.resize(SHA256_DIGEST_LENGTH);
-
-  SHA256(reinterpret_cast<const unsigned char*>(&address_[0]),
-         address_.size(), &my_id_[0]);
-
+  : my_node_(kAddress) {
   for (int i=1; i <= kMBit; ++i) {
-    // TODO: maybe put this in a function 
-    finger_[i].start = my_id_;
-    int mod = (i - 1) % (sizeof unsigned char),
-        offset = (i - 1) / (sizeof unsigned char);
-
-    int ind = SHA256_DIGEST_LENGTH - 1 - offset;
-
-    finger_[i].start[ind] += (1 << mod);
-    if (finger_[i].start[ind] < (1 << mod)) {
-      while (true) {
-        --ind;
-        if (ind < 0) break;
-        finger_[i].start[ind]++;
-        if (finger_[i].start[ind]!=0) break;
-      }
-    }
+    finger_[i].start = my_node_.id().add_power_of_2(i - 1);
   }
 
+  std::filesystem::create_directories(kDBPath);
   Options options;
   // Optimize RocksDB. This is the easiest way to get RocksDB to perform well
   options.IncreaseParallelism();
@@ -98,14 +78,16 @@ DServer::DServer(const std::string& kDBPath, const std::string& kAddress)
 }
 
 void DServer::Run() {
-  StoreServiceImpl service(db_, &config_);
+  StoreServiceImpl service(this);
 
   grpc::EnableDefaultHealthCheckService(true);
   grpc::reflection::InitProtoReflectionServerBuilderPlugin();
 
   ServerBuilder builder;
   // Listen on the given address without any authentication mechanism.
-  builder.AddListeningPort(address_ + ":50017", grpc::InsecureServerCredentials());
+
+  AddressString listening_address = "0.0.0.0" + my_node_.address().substr(my_node_.address().find(':'));
+  builder.AddListeningPort(listening_address, grpc::InsecureServerCredentials());
   // Register "service" as the instance through which we'll communicate with
   // clients. In this case it corresponds to an *synchronous* service.
   builder.RegisterService(&service);
@@ -122,68 +104,185 @@ void DServer::Join(const AddressString& known_node_address) {
     InitFingerTable(known_node_address);
     UpdateOthers();
 
-    // TODO: move keys in (predecessor, n] from successor to n
+    // Move keys in (predecessor, n] from successor to n: in set_predecessor
   }
   else {
     for (int i=1; i<=kMBit; ++i) {
-      finger_[i].node.address = address_;
-      finger_[i].node.id = my_id_;
+      finger_[i].node = my_node_;
     }
-
-    predecessor_.address = address_;
-    predecessor_.id = my_id_;
-/*
-      stub_(
-          Store::NewStub(
-              grpc::CreateChannel(
-                  address + kDefaultPort,
-                  grpc::InsecureChannelCredentials()))){
-                  */
+    predecessor_ = my_node_;
   }
 }
 
-AddressString DServer::FindSuccessor(const HashId& id) {
-  AddressString peer = FindPredecessor(id);
-  std::unique_ptr<Store::Stub> stub = Store::NewStub(
-      grpc::CreateChannel(peer, grpc::InsecureChannelCredentials()));
+AddressString DServer::FindSuccessor(const AddressString& remote_node, const HashId& id) {
+  if (remote_node.empty()) {
+    AddressString peer = FindPredecessor(id);
+    return successor(peer);
+  }
+  else {
+    auto stub = Store::NewStub(
+        grpc::CreateChannel(
+            remote_node, grpc::InsecureChannelCredentials()));
 
-  RequestWithId request;
-  request.set_id(id.grpc_bytes());
-  AddressResponse response;
-  grpc::Status status = stub->Successor(&client_context_, request, &response);
-
-  return response.address();
+    RequestWithId request;
+    Address response;
+    request.set_id(id.grpc_bytes());
+    stub->FindSuccessor(&client_context_, request, &response);
+    return response.address();
+  }
 }
 
 AddressString DServer::FindPredecessor(const HashId& id) {
-  AddressString peer = address_;
-  while (true) {
+  AddressString peer = my_node_.address(),
+                peer_succ = successor(peer);
+
+  while (!id.in_range(HashId(KeyWrapper(&peer)), HashId(KeyWrapper(&peer_succ)))) {
+    peer = ClosestPrecedingFinger(peer, id);
+    peer_succ = successor(peer);
   }
 
   return peer;
 }
 
-AddressString DServer::ClosestPrecedingFinger(const HashId& id) {
+AddressString DServer::ClosestPrecedingFinger(const AddressString& remote_node, const HashId& id) {
+  if (remote_node.empty()) {
+    for (int i=kMBit; i>=1; --i) {
+      if (finger_[i].node.id().in_range(my_node_.id(), id)) {
+        return finger_[i].node.address();
+      }
+    }
+    return my_node_.address();
+  }
+  else {
+    auto stub = Store::NewStub(
+        grpc::CreateChannel(
+            remote_node, grpc::InsecureChannelCredentials()));
+
+    RequestWithId request;
+    Address response;
+    request.set_id(id.grpc_bytes());
+    stub->ClosestPrecedingFinger(&client_context_, request, &response);
+    return response.address();
+  }
 }
 
-AddressString DServer::successor() {
-  return finger_[1].node.address;
+AddressString DServer::successor(const AddressString& remote_node) {
+  if (remote_node.empty()) {
+    return finger_[1].node.address();
+  }
+  else {
+    auto stub = Store::NewStub(
+        grpc::CreateChannel(
+            remote_node, grpc::InsecureChannelCredentials()));
+
+    Address response;
+    stub->Successor(&client_context_, Empty(), &response);
+    return response.address();
+  }
 }
 
-AddressString DServer::predecessor() {
-  return predecessor_.address;
+AddressString DServer::predecessor(const AddressString& remote_node) {
+  if (remote_node.empty()) {
+    return predecessor_.address();
+  }
+  else {
+    auto stub = Store::NewStub(
+        grpc::CreateChannel(
+            remote_node, grpc::InsecureChannelCredentials()));
+
+    Address response;
+    stub->Predecessor(&client_context_, Empty(), &response);
+    return response.address();
+  }
 }
 
-void DServer::set_predecessor(const AddressString& node_address) {
+void DServer::set_predecessor(const AddressString& remote_node, const AddressString& node_address) {
+  if (remote_node.empty()) {
+    predecessor_ = DNode(node_address);
+
+    auto stub = Store::NewStub(
+        grpc::CreateChannel(
+            node_address, grpc::InsecureChannelCredentials()));
+
+    rocksdb::Iterator* it = db_->NewIterator(rocksdb::ReadOptions());
+    PutRequest request;
+    Empty response;
+
+#ifdef DEBUG
+    std::cout << "New node joined. Key-values moving to new node " << node_address << ":" << std::endl;
+#endif
+
+    for (it->SeekToFirst(); it->Valid(); it->Next()) {
+      std::string key = it->key().ToString();
+      if (predecessor_.id().in_range(HashId(KeyWrapper(&key)), my_node_.id())) {
+        request.set_key(key);
+        request.set_value(it->value().ToString());
+
+#ifdef DEBUG
+        std::cout << "  Key: " << key <<" Value: " << it->value().ToString() << std::endl;
+#endif
+
+        request.set_from_client(false);
+        stub->Put(&client_context_, request, &response);
+        db_->Delete(WriteOptions(), key);
+      }
+
+      // cout << it->key().ToString() << ": " << it->value().ToString() << endl;
+    }
+    assert(it->status().ok()); // Check for any errors found during the scan
+    delete it; 
+  }
+  else {
+    auto stub = Store::NewStub(
+        grpc::CreateChannel(
+            remote_node, grpc::InsecureChannelCredentials()));
+
+    Address request;
+    request.set_address(node_address);
+    Empty response;
+    stub->SetPredecessor(&client_context_, request, &response);
+  }
 }
 
 void DServer::InitFingerTable(const AddressString& known_node_address) {
+  finger_[1].node = DNode(FindSuccessor(known_node_address, finger_[1].start));
+  predecessor_ = predecessor(finger_[1].node.address());
+  set_predecessor(finger_[1].node.address(), my_node_.address());
+
+  for (int i=1; i<kMBit; ++i) {
+    if (finger_[i+1].start.in_range(my_node_.id(), finger_[i].node.id())) {
+      finger_[i+1].node = finger_[i].node;
+    } else {
+      finger_[i+1].node = DNode(FindSuccessor(known_node_address, finger_[i+1].start));
+    }
+  }
 }
 
 void DServer::UpdateOthers() {
+  for (int i=1; i<=kMBit; ++i) {
+    AddressString peer = FindPredecessor(my_node_.id().subtract_power_of_2(i-1));
+    UpdateFingerTable(peer, my_node_.address(), i);
+  }
 }
 
-void DServer::UpdateFingerTable(const AddressString& node_address, int index) {
+void DServer::UpdateFingerTable(const AddressString& remote_node, const AddressString& node_address, int index) {
+  if (remote_node.empty()) {
+    if (DNode(node_address).in_range(my_node_, finger_[index].node)) {
+      finger_[index].node = DNode(node_address);
+      UpdateFingerTable(predecessor_.address(), node_address, index);
+    }
+  }
+  else {
+    auto stub = Store::NewStub(
+        grpc::CreateChannel(
+            remote_node, grpc::InsecureChannelCredentials()));
+
+    UpdateFingerTableRequest request;
+    request.set_address(node_address);
+    request.set_index(index);
+    Empty response;
+    stub->UpdateFingerTable(&client_context_, request, &response);
+  }
 }
 
 }  // namespace distrkvs

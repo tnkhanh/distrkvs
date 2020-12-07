@@ -16,6 +16,7 @@
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::Status;
+using google::protobuf::Empty;
 
 namespace distrkvs {
 
@@ -23,7 +24,7 @@ DClient::DClient(const std::string& kServerAddress)
     : stub_(
           Store::NewStub(
               grpc::CreateChannel(
-                  kServerAddress + ":50017",
+                  kServerAddress,
                   grpc::InsecureChannelCredentials()))) {}
 
 grpc::Status DClient::Put(const KeyString& key, const ValueString& value) {
@@ -32,10 +33,10 @@ grpc::Status DClient::Put(const KeyString& key, const ValueString& value) {
   put_request.set_value(value);
   put_request.set_from_client(true);
 
-  PutResponse reply;
+  Empty response;
   ClientContext context;
 
-  return stub_->Put(&context, put_request, &reply);
+  return stub_->Put(&context, put_request, &response);
 }
 
 grpc::Status DClient::Get(const KeyString& key, ValueString* value) {
@@ -43,11 +44,11 @@ grpc::Status DClient::Get(const KeyString& key, ValueString* value) {
   get_request.set_key(key);
   get_request.set_from_client(true);
 
-  GetResponse reply;
+  GetResponse response;
   ClientContext context;
 
-  Status status = stub_->Get(&context, get_request, &reply);
-  *value = reply.value();
+  Status status = stub_->Get(&context, get_request, &response);
+  *value = response.value();
 
   return status;
 }
