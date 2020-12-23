@@ -47,6 +47,7 @@ void HashId::set(const std::string& digest) {
 }
 
 bool HashId::in_range(const HashId& left, const HashId& right) const {
+  if (left==right) return true;
   if (left < *this) {
     return (*this) < right || right < left;
   } else {

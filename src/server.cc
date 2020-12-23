@@ -7,6 +7,7 @@
 #include <memory>
 #include <iostream>
 #include <fstream>
+#include <thread>
 
 #include "rocksdb/db.h"
 #include "rocksdb/slice.h"
@@ -29,7 +30,6 @@ using rocksdb::ReadOptions;
 
 using grpc::Server;
 using grpc::ServerBuilder;
-using grpc::ServerContext;
 
 namespace distrkvs {
 
@@ -60,6 +60,11 @@ bool operator < (const DNode& n1, const DNode& n2) {
 
 DServer::DServer(const std::string& kDBPath, const std::string& kAddress) 
   : my_node_(kAddress) {
+
+#ifdef DEBUG
+    std::cout << "My address: " << my_node_.address() << " " << my_node_.id().str() << std::endl;
+#endif
+
   for (int i=1; i <= kMBit; ++i) {
     finger_[i].start = my_node_.id().add_power_of_2(i - 1);
   }
@@ -96,7 +101,35 @@ void DServer::Run() {
 
   // Wait for the server to shutdown. Note that some other thread must be
   // responsible for shutting down the server for this call to ever return.
-  server->Wait();
+  //server->Wait();
+
+  std::thread server_thread(&Server::Wait, (server.get()));
+
+  std::cout<<"Server listening on " << my_node_.address() << std::endl;
+
+  std::string comm;
+
+  while (true) {
+    std::cin>>comm;
+    if (comm=="quit" || comm=="shutdown") {
+      server->Shutdown();
+      break;
+    }
+    else if (comm=="finger") {
+      int index;
+      std::cin>>index;
+
+      if (index < 0 || index > kMBit) {
+        std::cout << "Invalid finger index\n";
+      } else {
+        std::cout << "Start: " << finger_[index].start.str() << "\n";
+        std::cout << "Node:  " << finger_[index].node.id().str() << " "
+                  << finger_[index].node.address() << "\n";
+      }
+    }
+  }
+
+  server_thread.join();
 }
 
 void DServer::Join(const AddressString& known_node_address) {
@@ -115,7 +148,7 @@ void DServer::Join(const AddressString& known_node_address) {
 }
 
 AddressString DServer::FindSuccessor(const AddressString& remote_node, const HashId& id) {
-  if (remote_node.empty()) {
+  if (remote_node.empty() || remote_node==my_node_.address()) {
     AddressString peer = FindPredecessor(id);
     return successor(peer);
   }
@@ -124,10 +157,20 @@ AddressString DServer::FindSuccessor(const AddressString& remote_node, const Has
         grpc::CreateChannel(
             remote_node, grpc::InsecureChannelCredentials()));
 
+#ifdef DEBUG
+    std::cout << "FindSuccessor; gRPCalling " << remote_node << std::endl;
+#endif
+
+    ClientContext client_context;
     RequestWithId request;
     Address response;
     request.set_id(id.grpc_bytes());
-    stub->FindSuccessor(&client_context_, request, &response);
+    grpc::Status status = stub->FindSuccessor(&client_context, request, &response);
+
+#ifdef DEBUG
+    if (!status.ok()) std::cout << "--gRPC failed" << std::endl;
+#endif
+
     return response.address();
   }
 }
@@ -145,7 +188,7 @@ AddressString DServer::FindPredecessor(const HashId& id) {
 }
 
 AddressString DServer::ClosestPrecedingFinger(const AddressString& remote_node, const HashId& id) {
-  if (remote_node.empty()) {
+  if (remote_node.empty() || remote_node==my_node_.address()) {
     for (int i=kMBit; i>=1; --i) {
       if (finger_[i].node.id().in_range(my_node_.id(), id)) {
         return finger_[i].node.address();
@@ -158,16 +201,26 @@ AddressString DServer::ClosestPrecedingFinger(const AddressString& remote_node, 
         grpc::CreateChannel(
             remote_node, grpc::InsecureChannelCredentials()));
 
+#ifdef DEBUG
+    std::cout << "CPF; gRPCalling " << remote_node << std::endl;
+#endif
+
+    ClientContext client_context;
     RequestWithId request;
     Address response;
     request.set_id(id.grpc_bytes());
-    stub->ClosestPrecedingFinger(&client_context_, request, &response);
+    grpc::Status status = stub->ClosestPrecedingFinger(&client_context, request, &response);
+
+#ifdef DEBUG
+    if (!status.ok()) std::cout << "--gRPC failed" << std::endl;
+#endif
+
     return response.address();
   }
 }
 
 AddressString DServer::successor(const AddressString& remote_node) {
-  if (remote_node.empty()) {
+  if (remote_node.empty() || remote_node==my_node_.address()) {
     return finger_[1].node.address();
   }
   else {
@@ -175,14 +228,24 @@ AddressString DServer::successor(const AddressString& remote_node) {
         grpc::CreateChannel(
             remote_node, grpc::InsecureChannelCredentials()));
 
+#ifdef DEBUG
+    std::cout << "successor; gRPCalling " << remote_node << std::endl;
+#endif
+
+    ClientContext client_context;
     Address response;
-    stub->Successor(&client_context_, Empty(), &response);
+    grpc::Status status = stub->Successor(&client_context, Empty(), &response);
+
+#ifdef DEBUG
+    if (!status.ok()) std::cout << "--gRPC failed" << std::endl;
+#endif
+
     return response.address();
   }
 }
 
 AddressString DServer::predecessor(const AddressString& remote_node) {
-  if (remote_node.empty()) {
+  if (remote_node.empty() || remote_node==my_node_.address()) {
     return predecessor_.address();
   }
   else {
@@ -190,27 +253,53 @@ AddressString DServer::predecessor(const AddressString& remote_node) {
         grpc::CreateChannel(
             remote_node, grpc::InsecureChannelCredentials()));
 
+#ifdef DEBUG
+    std::cout << "predecessor; gRPCalling " << remote_node << std::endl;
+#endif
+
+    ClientContext client_context;
     Address response;
-    stub->Predecessor(&client_context_, Empty(), &response);
+    grpc::Status status = stub->Predecessor(&client_context, Empty(), &response);
+
+#ifdef DEBUG
+    if (!status.ok()) std::cout << "--gRPC failed" << std::endl;
+#endif
+
     return response.address();
   }
 }
 
 void DServer::set_predecessor(const AddressString& remote_node, const AddressString& node_address) {
-  if (remote_node.empty()) {
+  if (remote_node.empty() || remote_node==my_node_.address()) {
     predecessor_ = DNode(node_address);
 
     auto stub = Store::NewStub(
         grpc::CreateChannel(
             node_address, grpc::InsecureChannelCredentials()));
 
+#ifdef DEBUG
+    std::cout << "moving keys; gRPCalling " << node_address << std::endl;
+#endif
+
+/*    ClientContext hc_client_context; 
+    HealthCheckRequest hc_request;
+    HealthCheckResponse hc_response;
+    grpc::Status status = stub->Check(&hc_client_context, hc_request, &hc_response);
+
+    if (hc_response.status()!=ServingStatus::SERVING) {
+#ifdef DEBUG
+      std::cout << "--Failed to connect to remote node" << std::endl;
+#endif
+      return;
+    } */
+
+#ifdef DEBUG
+    std::cout << "--Connected to new node. Key-values moving to " << node_address << std::endl;
+#endif
+
     rocksdb::Iterator* it = db_->NewIterator(rocksdb::ReadOptions());
     PutRequest request;
     Empty response;
-
-#ifdef DEBUG
-    std::cout << "New node joined. Key-values moving to new node " << node_address << ":" << std::endl;
-#endif
 
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
       std::string key = it->key().ToString();
@@ -222,8 +311,9 @@ void DServer::set_predecessor(const AddressString& remote_node, const AddressStr
         std::cout << "  Key: " << key <<" Value: " << it->value().ToString() << std::endl;
 #endif
 
+        ClientContext client_context;
         request.set_from_client(false);
-        stub->Put(&client_context_, request, &response);
+        stub->Put(&client_context, request, &response);
         db_->Delete(WriteOptions(), key);
       }
 
@@ -237,10 +327,20 @@ void DServer::set_predecessor(const AddressString& remote_node, const AddressStr
         grpc::CreateChannel(
             remote_node, grpc::InsecureChannelCredentials()));
 
+#ifdef DEBUG
+    std::cout << "set_predecessor; gRPCalling " << remote_node << std::endl;
+#endif
+
+    ClientContext client_context;
     Address request;
     request.set_address(node_address);
     Empty response;
-    stub->SetPredecessor(&client_context_, request, &response);
+    grpc::Status status = stub->SetPredecessor(&client_context, request, &response);
+
+#ifdef DEBUG
+    if (!status.ok()) std::cout << "--gRPC failed" << std::endl;
+#endif
+
   }
 }
 
@@ -266,7 +366,7 @@ void DServer::UpdateOthers() {
 }
 
 void DServer::UpdateFingerTable(const AddressString& remote_node, const AddressString& node_address, int index) {
-  if (remote_node.empty()) {
+  if (remote_node.empty() || remote_node==my_node_.address()) {
     if (DNode(node_address).in_range(my_node_, finger_[index].node)) {
       finger_[index].node = DNode(node_address);
       UpdateFingerTable(predecessor_.address(), node_address, index);
@@ -277,11 +377,22 @@ void DServer::UpdateFingerTable(const AddressString& remote_node, const AddressS
         grpc::CreateChannel(
             remote_node, grpc::InsecureChannelCredentials()));
 
+#ifdef DEBUG
+    std::cout << "UpdateFingerTable; gRPCalling " << remote_node << std::endl;
+#endif
+
+    ClientContext client_context;
+
     UpdateFingerTableRequest request;
     request.set_address(node_address);
     request.set_index(index);
     Empty response;
-    stub->UpdateFingerTable(&client_context_, request, &response);
+    grpc::Status status = stub->UpdateFingerTable(&client_context, request, &response);
+
+#ifdef DEBUG
+    if (!status.ok()) std::cout << "--gRPC failed" << std::endl;
+#endif
+
   }
 }
 

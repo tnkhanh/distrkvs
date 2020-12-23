@@ -54,7 +54,6 @@ class DServer {
   DB* db_;
   FingerEntry finger_[kMBit + 1];
   DNode predecessor_;
-  ClientContext client_context_;
 
   //if remote_node is "", it's a local call
 

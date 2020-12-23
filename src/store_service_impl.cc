@@ -36,8 +36,12 @@ Status StoreServiceImpl::Get(ServerContext* context,
             peer, grpc::InsecureChannelCredentials()));
 
     ClientContext client_context;
+    GetRequest inner_request;
+    inner_request.set_key(request->key());
+    inner_request.set_from_client(false);
+
     GetResponse inner_response;
-    grpc::Status status = stub->Get(&client_context, *request, &inner_response);
+    grpc::Status status = stub->Get(&client_context, inner_request, &inner_response);
     response->set_value(inner_response.value());
     return status;
   } else {
@@ -74,8 +78,12 @@ Status StoreServiceImpl::Put(ServerContext* context,
             peer, grpc::InsecureChannelCredentials()));
 
     ClientContext client_context;
+    PutRequest inner_request;
+    inner_request.set_key(request->key());
+    inner_request.set_value(request->value());
+    inner_request.set_from_client(false);
     Empty inner_response;
-    return stub->Put(&client_context, *request, &inner_response);
+    return stub->Put(&client_context, inner_request, &inner_response);
   } else {
     rocksdb::Status s = dserver_->db_->Put(WriteOptions(), request->key(), request->value());
 

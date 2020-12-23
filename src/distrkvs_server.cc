@@ -41,7 +41,6 @@ int main(int argc, char **argv) {
 
   distrkvs::DServer server(kDBPath, kAddress);
 
-  std::cout<<"Server listening on " << kAddress << std::endl;
   server.Join(kRemoteNode);
 
   if (kRemoteNode.empty()) {
