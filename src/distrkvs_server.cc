@@ -23,7 +23,7 @@ void handler(int sig) {
 }
 
 int main(int argc, char **argv) {
-  signal(SIGABRT, handler);
+// signal(SIGABRT, handler);
   std::ios_base::sync_with_stdio(false);
   std::cout << "Distrkvs server\n";
   std::cout << "C++ Standard: " << __cplusplus << "\n";
