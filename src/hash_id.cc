@@ -1,4 +1,6 @@
-#include "hash_id.h"
+// Copyright (c) 2020 forkbase
+
+#include "distrkvs/hash_id.h"
 
 #include <cstdio>
 #include <cstdlib>

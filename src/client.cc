@@ -1,6 +1,6 @@
 // Copyright (c) 2020 forkbase
 
-#include "src/client.h"
+#include "distrkvs/client.h"
 
 #include <filesystem>
 #include <string>
@@ -11,7 +11,7 @@
 #include "grpcpp/health_check_service_interface.h"
 #include "grpcpp/ext/proto_server_reflection_plugin.h"
 
-#include "store.grpc.pb.h"
+#include "distrkvs/generated/store.grpc.pb.h"
 
 using grpc::Channel;
 using grpc::ClientContext;

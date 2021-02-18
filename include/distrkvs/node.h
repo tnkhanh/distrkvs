@@ -10,7 +10,7 @@
 
 #include "grpcpp/grpcpp.h"
 
-#include "store.grpc.pb.h"
+#include "distrkvs/generated/store.grpc.pb.h"
 
 namespace distrkvs {
 

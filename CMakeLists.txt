@@ -29,45 +29,51 @@ get_filename_component(proto "protos/${proto_name}.proto" ABSOLUTE)
 get_filename_component(proto_path "${proto}" PATH)
 
 # Generated sources
-set(proto_srcs "${PROJECT_BINARY_DIR}/${proto_name}.pb.cc")
-set(proto_hdrs "${PROJECT_BINARY_DIR}/${proto_name}.pb.h")
-set(grpc_srcs "${PROJECT_BINARY_DIR}/${proto_name}.grpc.pb.cc")
-set(grpc_hdrs "${PROJECT_BINARY_DIR}/${proto_name}.grpc.pb.h")
+set(gen_dir "${PROJECT_BINARY_DIR}/${PROJECT_NAME}/generated")
+file(MAKE_DIRECTORY ${gen_dir})
+set(proto_srcs "${gen_dir}/${proto_name}.pb.cc")
+set(proto_hdrs "${gen_dir}/${proto_name}.pb.h")
+set(grpc_srcs "${gen_dir}/${proto_name}.grpc.pb.cc")
+set(grpc_hdrs "${gen_dir}/${proto_name}.grpc.pb.h")
 add_custom_command(
       OUTPUT "${proto_srcs}" "${proto_hdrs}" "${grpc_srcs}" "${grpc_hdrs}"
       COMMAND ${_PROTOBUF_PROTOC}
-      ARGS --grpc_out "${PROJECT_BINARY_DIR}"
-      --cpp_out "${PROJECT_BINARY_DIR}"
+      ARGS --grpc_out "${gen_dir}"
+      --cpp_out "${gen_dir}"
         -I "${proto_path}"
         --plugin=protoc-gen-grpc="${_GRPC_CPP_PLUGIN_EXECUTABLE}"
         "${proto}"
       DEPENDS "${proto}")
 
-foreach (_executable
-  server client)
-  set(_target  "${PROJECT_NAME}_${_executable}")
-  set(_common_srcs "src/${_target}.cc" "src/${_executable}.cc" ${proto_srcs} ${grpc_srcs})
-  set(_common_libs pthread dl RocksDB::rocksdb gRPC::grpc++_reflection gRPC::grpc++ protobuf::libprotobuf stdc++fs)
-  if (_executable STREQUAL "server")
-    set(srcs "${_common_srcs}" "src/store_service_impl.cc" "src/hash_id.cc")
-    set(libs "${_common_libs}" "crypto")
-  else()
-    set(srcs ${_common_srcs})
-    set(libs ${_common_libs})
-  endif()
+# Needed libdl before, why?!
 
-  add_executable(${_target} ${srcs})
-  target_include_directories(${_target} PUBLIC ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
-  target_link_libraries(${_target} PUBLIC ${libs})
-endforeach()
+add_library(${PROJECT_NAME}_client STATIC ${proto_srcs} ${grpc_srcs} src/client.cc)
+target_include_directories(${PROJECT_NAME}_client PUBLIC ${PROJECT_SOURCE_DIR} "${PROJECT_SOURCE_DIR}/include" ${PROJECT_BINARY_DIR})
+target_link_libraries(${PROJECT_NAME}_client PUBLIC pthread gRPC::grpc++)
 
-add_library(${PROJECT_NAME} SHARED ${proto_srcs} ${grpc_srcs} src/client.cc)
-target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
-target_link_libraries(${PROJECT_NAME} PUBLIC ${_common_libs})
+add_library(${PROJECT_NAME}_server STATIC ${proto_srcs} ${grpc_srcs} src/server.cc "src/store_service_impl.cc" "src/hash_id.cc")
+target_include_directories(${PROJECT_NAME}_server PUBLIC ${PROJECT_SOURCE_DIR} "${PROJECT_SOURCE_DIR}/include" ${PROJECT_BINARY_DIR})
+target_link_libraries(${PROJECT_NAME}_server PUBLIC pthread RocksDB::rocksdb gRPC::grpc++_reflection gRPC::grpc++ protobuf::libprotobuf stdc++fs crypto)
+
+add_executable(sample_client "src/sample_client.cc" "src/client.cc" ${proto_srcs} ${grpc_srcs})
+target_include_directories(sample_client PUBLIC "${PROJECT_SOURCE_DIR}/include" ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
+target_link_libraries(sample_client PUBLIC dl pthread gRPC::grpc++) 
+
+add_executable(sample_server "src/sample_server.cc" "src/server.cc" "src/store_service_impl.cc" "src/hash_id.cc" ${proto_srcs} ${grpc_srcs})
+target_include_directories(sample_server PUBLIC "${PROJECT_SOURCE_DIR}/include" ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
+target_link_libraries(sample_server PUBLIC dl pthread RocksDB::rocksdb gRPC::grpc++_reflection gRPC::grpc++ protobuf::libprotobuf stdc++fs crypto)
+
+include(GNUInstallDirs)
+
+message(STATUS "INCLUDEDIR: ${CMAKE_INSTALL_INCLUDEDIR}")
+
+#install(DIRECTORY "include/${PROJECT_NAME}" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
 if (DEBUG)
   add_compile_definitions(DEBUG)
 endif()
 
-add_executable(test src/test.cc src/hash_id.cc)
-target_link_libraries(test PUBLIC crypto)
+if (TESTS)
+  add_executable(test src/test.cc src/hash_id.cc)
+  target_link_libraries(test PUBLIC crypto)
+endif()

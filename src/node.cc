@@ -1,14 +1,12 @@
 // Copyright (c) 2020 forkbase
 
-#include "node.h"
+#include "distrkvs/node.h"
 
 #include <string>
 
 #include "grpcpp/grpcpp.h"
 
-#include "store.grpc.pb.h"
-
-#include "src/node.h"
+#include "distrkvs/generated/store.grpc.pb.h"
 
 using grpc::Channel;
 using grpc::ClientContext;

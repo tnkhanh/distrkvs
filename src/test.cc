@@ -1,7 +1,9 @@
+// Copyright (c) 2020 forkbase
+
 #include <string>
 #include <iostream>
 
-#include "hash_id.h"
+#include "distrkvs/hash_id.h"
 
 namespace distrkvs {
 class HashIdTest {

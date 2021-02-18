@@ -3,8 +3,8 @@
 #ifndef DISTRKVS_STORE_SERVICE_IMPL_H_
 #define DISTRKVS_STORE_SERVICE_IMPL_H_
 
-#include "store.grpc.pb.h"
-#include "server.h"
+#include "distrkvs/generated/store.grpc.pb.h"
+#include "distrkvs/server.h"
 
 using rocksdb::DB;
 using grpc::ClientContext;

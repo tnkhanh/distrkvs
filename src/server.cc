@@ -1,6 +1,6 @@
 // Copyright (c) 2020 forkbase
 
-#include "server.h"
+#include "distrkvs/server.h"
 
 #include <filesystem>
 #include <string>
@@ -17,10 +17,10 @@
 #include "grpcpp/health_check_service_interface.h"
 #include "grpcpp/ext/proto_server_reflection_plugin.h"
 
-#include "store.grpc.pb.h"
+#include "distrkvs/generated/store.grpc.pb.h"
 
-#include "store_service_impl.h"
-#include "hash_id.h"
+#include "distrkvs/store_service_impl.h"
+#include "distrkvs/hash_id.h"
 
 using rocksdb::DB;
 using rocksdb::Options;

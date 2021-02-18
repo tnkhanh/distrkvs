@@ -1,6 +1,6 @@
 // Copyright (c) 2020 forkbase
 
-#include "store_service_impl.h"
+#include "distrkvs/store_service_impl.h"
 
 #include <iostream>
 #include <string>
@@ -9,9 +9,9 @@
 
 #include "grpcpp/grpcpp.h"
 
-#include "store.grpc.pb.h"
+#include "distrkvs/generated/store.grpc.pb.h"
 
-#include "hash_id.h"
+#include "distrkvs/hash_id.h"
 
 using google::protobuf::Empty;
 using grpc::ServerContext;

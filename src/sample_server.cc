@@ -7,7 +7,7 @@
 #include <string>
 #include <iostream>
 
-#include "src/server.h"
+#include "distrkvs/server.h"
 
 void handler(int sig) {
   void *array[10];

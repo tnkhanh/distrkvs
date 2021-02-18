@@ -10,9 +10,9 @@
 
 #include "grpcpp/grpcpp.h"
 
-#include "store.grpc.pb.h"
+#include "distrkvs/generated/store.grpc.pb.h"
 
-#include "hash_id.h"
+#include "distrkvs/hash_id.h"
 
 using rocksdb::DB;
 using grpc::ClientContext;

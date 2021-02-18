@@ -1,14 +1,12 @@
 // Copyright (c) 2020 forkbase
 
-#include <filesystem>
 #include <string>
 #include <iostream>
 #include <sstream>
 
-#include "grpcpp/grpcpp.h"
+#include "distrkvs/client.h"
 
-#include "store.grpc.pb.h"
-#include "src/client.h"
+#include "distrkvs/generated/store.grpc.pb.h"
 
 using distrkvs::KeyString;
 using distrkvs::ValueString;
