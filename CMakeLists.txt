@@ -47,13 +47,16 @@ add_custom_command(
 
 # Needed libdl before, why?!
 
-add_library(${PROJECT_NAME}_client STATIC ${proto_srcs} ${grpc_srcs} src/client.cc)
+add_library(${PROJECT_NAME}_client SHARED ${proto_srcs} ${grpc_srcs} src/client.cc)
 target_include_directories(${PROJECT_NAME}_client PUBLIC ${PROJECT_SOURCE_DIR} "${PROJECT_SOURCE_DIR}/include" ${PROJECT_BINARY_DIR})
 target_link_libraries(${PROJECT_NAME}_client PUBLIC pthread gRPC::grpc++)
 
-add_library(${PROJECT_NAME}_server STATIC ${proto_srcs} ${grpc_srcs} src/server.cc "src/store_service_impl.cc" "src/hash_id.cc")
+add_library(${PROJECT_NAME}_server SHARED ${proto_srcs} ${grpc_srcs} src/server.cc "src/store_service_impl.cc" "src/hash_id.cc")
 target_include_directories(${PROJECT_NAME}_server PUBLIC ${PROJECT_SOURCE_DIR} "${PROJECT_SOURCE_DIR}/include" ${PROJECT_BINARY_DIR})
-target_link_libraries(${PROJECT_NAME}_server PUBLIC pthread RocksDB::rocksdb gRPC::grpc++_reflection gRPC::grpc++ protobuf::libprotobuf stdc++fs crypto)
+target_link_libraries(${PROJECT_NAME}_server PUBLIC pthread "${RocksDB_DIR}/../../librocksdb.so" RocksDB::rocksdb gRPC::grpc++_reflection gRPC::grpc++ protobuf::libprotobuf stdc++fs crypto)
+
+# RocksDB::rocksdb is the lib name
+# "${RocksDB_DIR}/../../librocksdb.so" is the path
 
 add_executable(sample_client "src/sample_client.cc" "src/client.cc" ${proto_srcs} ${grpc_srcs})
 target_include_directories(sample_client PUBLIC "${PROJECT_SOURCE_DIR}/include" ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
@@ -61,7 +64,7 @@ target_link_libraries(sample_client PUBLIC dl pthread gRPC::grpc++)
 
 add_executable(sample_server "src/sample_server.cc" "src/server.cc" "src/store_service_impl.cc" "src/hash_id.cc" ${proto_srcs} ${grpc_srcs})
 target_include_directories(sample_server PUBLIC "${PROJECT_SOURCE_DIR}/include" ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
-target_link_libraries(sample_server PUBLIC dl pthread RocksDB::rocksdb gRPC::grpc++_reflection gRPC::grpc++ protobuf::libprotobuf stdc++fs crypto)
+target_link_libraries(sample_server PUBLIC dl pthread "${RocksDB_DIR}/../../librocksdb.so" RocksDB::rocksdb gRPC::grpc++_reflection gRPC::grpc++ protobuf::libprotobuf stdc++fs crypto)
 
 include(GNUInstallDirs)
 
